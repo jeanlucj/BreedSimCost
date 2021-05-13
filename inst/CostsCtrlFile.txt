@@ -1,0 +1,23 @@
+# Program costs
+# SDN CET PYT
+plotCosts
+5 20 30
+
+# Cost per location. Will be multiplied by the max nLocs
+# I have no idea what a good number would be
+perLocationCost
+1000
+
+# Crossing cost
+crossingCost
+0.2
+
+# Cost of creating a variety candidate from a breeding individual
+candidateDevelCost
+2
+
+# Genotyping cost
+qcGenoCost
+1.5
+wholeGenomeCost
+10

@@ -1,0 +1,60 @@
+# Variety Development Pipeline
+# The number of cycles to run the scheme
+nCyclesToRun
+5
+
+# How many burn-in cycles of phenotypic selection before
+# starting the two-part genomic selection?
+nBurnInCycles
+8
+
+# The number of stages simulated and retained in the records
+nStages
+3
+stageNames
+SDN CET PYT
+
+# Vector of number of entries used in each stage
+nEntries
+300 100 30
+
+# Vector of number of reps used in each stage
+nReps
+1 1 2
+
+# Vector of number of locations used in each stage
+nLocs
+1 2 3
+
+# Vector of error variances estimated from historical data 
+errVars
+400 120 70
+
+# Vector of minimum inventory to enter the stage
+seedNeeded
+1 10 60
+
+# Vector of inventory output from the stage
+seedProduced
+10 80 360
+
+# Population Improvement Cycle
+# Effective population size for optimal contributions
+optiContEffPop
+20
+
+# Number of breeding population progeny each cycle
+nBreedingProg
+200
+
+# Number of genomic selection cycles per year for population improvement
+nPopImpCycPerYear
+2
+
+# Number of cycles back of variety candidates for training
+keepNTrainingCyc
+3
+
+# Number of cycles back of breeding individuals as parent candidates
+keepNBreedingCyc
+2

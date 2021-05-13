@@ -1,0 +1,42 @@
+# Implementation details for optimization
+
+# Number of cores for parallel processing
+nCores
+2
+
+# parameters for initial grid search
+# each percentage vector should be nStages + 1
+# The first value is for the population improvement cycle
+minPercentage
+0.20 0.30 0.05 0.05
+
+maxPercentage
+0.65 0.75 0.35 0.35
+
+percentageStep
+0.15 0.15 0.15 0.15
+
+# Minimum number of breeding progeny in PIC
+minNBreedingProg
+2
+
+# How small should the confidence interval
+# on budgets be before you stop
+tolerance
+0.4
+
+# When running batches of simulations, how many sims per batch?
+batchSize
+50
+
+# How many batches should you do before you quit
+maxNumBatches
+6
+
+# When redoing simulations, how many should be high gain?
+nHighGain
+20
+
+#When redoing simulations, how many should be high uncertainty?
+nUncertain
+10

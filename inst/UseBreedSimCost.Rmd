@@ -1,0 +1,126 @@
+---
+title: "Use BreedSimCost"
+author: "Jean-Luc Jannink"
+date: "5/8/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Load packages
+```{r load packages, message=TRUE}
+packages_used <- c("AlphaSimR", "tidyverse", "workflowr", "here", "devtools")
+ip <- installed.packages()
+for (package in packages_used){
+  if (!(package %in% ip[,"Package"])) install.packages(package)
+}
+
+devtools::install_github("jeanlucj/BreedSimCost", ref="master",
+                         build_vignettes=buildVignettes)
+
+here::i_am("analysis/UseBreedSimCost.Rmd")
+
+random_seed <- 45678
+set.seed(random_seed)
+
+```
+
+### Illustrate using the functions in SimpleBreedSim
+
+```{r Initialize program}
+pathToSimDirectory <- path.package("BreedSimCost")
+if (pathToSimDirectory == "/Users/jj332/Documents/GitRepo/BreedSimCost"){
+  pathToSimDirectory <- paste0(pathToSimDirectory, "/inst")
+}
+
+bsd <- initializeProgram(
+         paste0(pathToSimDirectory, "/", "FounderCtrlFile.txt"),
+         paste0(pathToSimDirectory, "/", "SchemeCtrlFile.txt"),
+         paste0(pathToSimDirectory, "/", "CostsCtrlFile.txt"), 
+         paste0(pathToSimDirectory, "/", "OptimizationCtrlFile.txt")
+                         )
+```
+
+
+```{r Fill variety development pipeline}
+# Year 1
+bsd$year <- bsd$year+1
+bsd <- makeVarietyCandidates(bsd)
+
+entriesSDN <- bsd$varietyCandidates@id
+bsd <- runVDPtrial(bsd, "SDN", entriesSDN)
+
+parents <- selectParentsBurnIn(bsd)
+bsd <- makeCrossesBurnIn(bsd, parents)
+
+# Year 2
+bsd$year <- bsd$year+1
+bsd <- makeVarietyCandidates(bsd)
+
+entries <- chooseTrialEntries(bsd, toTrial="SDN")
+bsd <- runVDPtrial(bsd, "SDN", entries)
+entries <- chooseTrialEntries(bsd, fromTrial="SDN", toTrial="CET")
+bsd <- runVDPtrial(bsd, "CET", entries)
+
+parents <- selectParentsBurnIn(bsd)
+bsd <- makeCrossesBurnIn(bsd, parents)
+
+# Year 3 and onward
+for (burnIn in 1:10){
+  bsd$year <- bsd$year+1
+  bsd <- makeVarietyCandidates(bsd)
+  
+  entries <- chooseTrialEntries(bsd, toTrial="SDN")
+  bsd <- runVDPtrial(bsd, "SDN", entries)
+  entries <- chooseTrialEntries(bsd, fromTrial="SDN", toTrial="CET")
+  bsd <- runVDPtrial(bsd, "CET", entries)
+  entries <- chooseTrialEntries(bsd, fromTrial="CET", toTrial="PYT")
+  bsd <- runVDPtrial(bsd, "PYT", entries)
+
+  parents <- selectParentsBurnIn(bsd)
+  bsd <- makeCrossesBurnIn(bsd, parents)
+}
+plot(gv(bsd$varietyCandidates))
+
+burnedInBSD <- bsd
+```
+
+```{r Function to run one replication of your breeding scheme}
+# This is code from the package that you can run
+# In the package, it's in the function runWithBudget
+
+  startValues <- calcCurrentStatus(bsd)
+  
+  for (twoPart in 1:bsd$nCyclesToRun){
+    bsd$year <- bsd$year+1
+    bsd <- makeVarietyCandidates(bsd)
+    
+    # Within the year, sequentially run the VDP...
+    for (stage in 1:bsd$nStages){
+      entries <- chooseTrialEntries(bsd, toTrial=bsd$stageNames[stage],
+                   fromTrial=ifelse(stage == 1, NULL, bsd$stageNames[stage-1]))
+      bsd <- runVDPtrial(bsd, bsd$stageNames[stage], entries)
+    }
+
+    # ... And then run the PIC. Sequencing could be made more complicated
+    for (genSel in 1:bsd$nPopImpCycPerYear){
+      optCont <- selectParents(bsd)
+      bsd <- makeCrosses(bsd, optCont)
+    }
+  }
+  
+  endValues <- calcCurrentStatus(bsd)
+
+  print(startValues)
+  print(endValues)
+```
+
+### The main interface for optimizing budgets
+
+```{r Cost optimization}
+bsd <- burnedInBSD
+optimizationResults <- optimizeByLOESS(bsd)
+```
+
