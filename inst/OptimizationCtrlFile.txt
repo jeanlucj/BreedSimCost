@@ -2,19 +2,19 @@
 
 # Number of cores for parallel processing
 nCores
-2
+3
 
 # parameters for initial grid search
 # each percentage vector should be nStages + 1
 # The first value is for the population improvement cycle
 minPercentage
-0.20 0.30 0.05 0.05
+0.20 0.30 0.10 0.10
 
 maxPercentage
-0.65 0.75 0.35 0.35
+0.60 0.70 0.30 0.30
 
 percentageStep
-0.15 0.15 0.15 0.15
+0.20 0.20 0.20 0.20
 
 # Minimum number of breeding progeny in PIC
 minNBreedingProg
@@ -27,16 +27,20 @@ tolerance
 
 # When running batches of simulations, how many sims per batch?
 batchSize
-50
+20
 
 # How many batches should you do before you quit
 maxNumBatches
-6
+3
 
 # When redoing simulations, how many should be high gain?
 nHighGain
-20
+10
 
 #When redoing simulations, how many should be high uncertainty?
 nUncertain
-10
+4
+
+# Get rid of parallel processing if debugging
+debug
+TRUE

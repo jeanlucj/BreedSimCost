@@ -19,31 +19,14 @@
 #' bsd <- initializeProgram("FounderCtrlFile.txt")
 #'
 #' @export
-initializeProgram <- function(founderFile, schemeFile, costFile){
+initializeProgram <- function(founderFile, schemeFile, 
+                              costFile, optimizationFile){
   # Read parameters to create founders
-  parmNames <- c("nChr", "nFounders", "effPopSize", "quickHaplo", 
+  parmNames <- c("nChr", "effPopSize", "quickHaplo", 
                  "segSites", "nQTL", "nSNP", "genVar", "gxeVar", 
                  "gxyVar", "gxlVar", "gxyxlVar", "meanDD", "varDD", 
                  "relAA")
   bsd <- readControlFile(founderFile, parmNames)
-
-  # Create haplotypes for founder population of outbred individuals
-  if (bsd$quickHaplo){
-    founderHap <- quickHaplo(nInd=bsd$nFounders, nChr=bsd$nChr, segSites=bsd$segSites)
-  } else{
-    founderHap <- runMacs2(nInd=bsd$nFounders, nChr=bsd$nChr, segSites=bsd$segSites, Ne=bsd$effPopSize)
-  }
-
-  # Global simulation parameters from founder haplotypes
-  bsd$SP <- SimParam$new(founderHap)
-  bsd$SP$restrSegSites(minQtlPerChr=1, minSnpPerChr=10, overlap=FALSE)
-  # Additive, dominance, and epistatic trait architecture
-  bsd$SP$addTraitADE(nQtlPerChr=bsd$nQTL, var=bsd$genVar, meanDD=bsd$meanDD, varDD=bsd$varDD, relAA=bsd$relAA, useVarA=FALSE)
-  # Observed SNPs per chromosome
-  bsd$SP$addSnpChip(bsd$nSNP)
-
-  # Create the founders
-  bsd$breedingPop <- AlphaSimR::newPop(founderHap, simParam=bsd$SP)
 
   # Read parameters about trial types
   parmNames <- c("nCyclesToRun", "nBurnInCycles", "nStages", "stageNames", 
@@ -64,14 +47,37 @@ initializeProgram <- function(founderFile, schemeFile, costFile){
   parmNames <- c("nCores", "minPercentage", "maxPercentage",
                  "percentageStep", "minNBreedingProg",
                  "tolerance", "batchSize", "maxNumBatches",
-                 "nHighGain", "nUncertain")
-  bsdNew <- readControlFile(costFile, parmNames)
+                 "nHighGain", "nUncertain", "debug")
+  bsdNew <- readControlFile(optimizationFile, parmNames)
   bsd <- c(bsd, bsdNew)
   
   # Add miscelaneous data structures
   bsd$year <- 0
   bsd$nextTrialID <- 1
   bsd <- calcDerivedParms(bsd)
+  bsd <- calcBudget(bsd)
+  
+  # Create haplotypes for founder population of outbred individuals
+  if (bsd$quickHaplo){
+    founderHap <- quickHaplo(nInd=bsd$nBreedingProg, 
+                             nChr=bsd$nChr, segSites=bsd$segSites)
+  } else{
+    founderHap <- runMacs2(nInd=bsd$nBreedingProg, 
+                           nChr=bsd$nChr, segSites=bsd$segSites, 
+                           Ne=bsd$effPopSize)
+  }
+  
+  # Global simulation parameters from founder haplotypes
+  bsd$SP <- SimParam$new(founderHap)
+  bsd$SP$restrSegSites(minQtlPerChr=1, minSnpPerChr=10, overlap=FALSE)
+  # Additive, dominance, and epistatic trait architecture
+  bsd$SP$addTraitADE(nQtlPerChr=bsd$nQTL, var=bsd$genVar, meanDD=bsd$meanDD, varDD=bsd$varDD, relAA=bsd$relAA, useVarA=FALSE)
+  # Observed SNPs per chromosome
+  bsd$SP$addSnpChip(bsd$nSNP)
+  
+  # Create the founders
+  bsd$breedingPop <- AlphaSimR::newPop(founderHap, simParam=bsd$SP)
+
   return(bsd)
 }
 
@@ -191,7 +197,8 @@ calcDerivedParms <- function(bsd){
   }
 
   bsd$quickHaplo <- makeLogical(bsd$quickHaplo)
-
+  bsd$debug <- makeLogical(bsd$debug)
+  
   # Genetic architecture defaults
   if (nv(bsd$meanDD)) bsd$meanDD <- 0
   if (nv(bsd$varDD)) bsd$varDD <- 0

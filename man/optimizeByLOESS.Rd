@@ -7,16 +7,7 @@
 optimizeByLOESS(bsd)
 }
 \arguments{
-\item{batchSize}{Integer number of simulations between LOESS fits}
-
-\item{tolerance}{Numerical difference between min amd max 
-percentage budgets for all stages}
-
-\item{baseDir}{Directory if you want to have progress saved by batch. 
-Relative to R working directory. If not empty string, include final /}
-
-\item{maxNumBatches}{Integer to stop the simulations eventually if
-the algorithm is not narrowing in on optimal parameter values}
+\item{bsd}{List of breeding scheme data. Has parameters for optimization too.}
 }
 \value{
 Numeric matrix with all simulation budget allocations, 

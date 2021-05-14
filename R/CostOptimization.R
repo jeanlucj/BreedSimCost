@@ -11,7 +11,7 @@
 #' bsd <- calcBudget(bsd)
 #'
 #' @export
-calcBudget <- function(bsd, nEntries=NULL, nBreedingProg=NULL){
+calcBudget <- function(bsd){
   # Calculate the program yearly cost
   # Assumptions
   # There is no QC genotyping in the population improvement cycle
@@ -20,16 +20,13 @@ calcBudget <- function(bsd, nEntries=NULL, nBreedingProg=NULL){
   # The number of plots in each trial is nEntries*nReps so 
   # the cost of the trial is nEntries*nReps*nLocs*plotCost
 
-  if (is.null(nEntries)) nEntries <- bsd$nEntries
-  if (is.null(nBreedingProg)) nBreedingProg <- bsd$nBreedingProg
-  
-  crossCosts <- nBreedingProg * bsd$nPopImpCycPerYear * bsd$crossingCost
-  genoCostsPIC <- nBreedingProg * bsd$nPopImpCycPerYear *
+  crossCosts <- bsd$nBreedingProg * bsd$nPopImpCycPerYear * bsd$crossingCost
+  genoCostsPIC <- bsd$nBreedingProg * bsd$nPopImpCycPerYear *
     bsd$wholeGenomeCost
-  develCosts <- nEntries[1] * bsd$candidateDevelCost
-  genoCostsVDP <- sum(nEntries) * bsd$qcGenoCost + 
-    nEntries[1] * bsd$wholeGenomeCost
-  trialCosts <- (nEntries * bsd$nReps * bsd$nLocs) %*% bsd$plotCost
+  develCosts <- bsd$nEntries[1] * bsd$candidateDevelCost
+  genoCostsVDP <- sum(bsd$nEntries) * bsd$qcGenoCost + 
+    bsd$nEntries[1] * bsd$wholeGenomeCost
+  trialCosts <- (bsd$nEntries * bsd$nReps * bsd$nLocs) %*% bsd$plotCost
   locationCosts <- max(bsd$nLocs) * bsd$perLocationCost
   
   budget <- crossCosts + develCosts + genoCostsVDP +
@@ -88,7 +85,7 @@ budgetToScheme <- function(percentages, bsd){
   
   bsd$realizedBudget <- NA
   if (!failure){
-    bsd$realizedBudget <- calcBudget(bsd, nEntries, nBreedingProg)
+    bsd$realizedBudget <- calcBudget(bsd)
     bsd$nBreedingProg <- nBreedingProg
     bsd$nEntries <- nEntries
   }
@@ -146,7 +143,14 @@ makeGrid <- function(bsd){
 #'
 #' @export
 runWithBudget <- function(percentages, bsd){
-  bsd <- budgetToScheme(bsd, percentages)
+  require(here)
+  on.exit(expr={
+    print(traceback())
+    saveRDS(mget(ls()), file=here::here("data/runWithBudget.rds"))
+  }
+  )
+  print(percentages)
+  bsd <- budgetToScheme(percentages, bsd)
   if (bsd$failure) return(c(percentages, NA))
   
   startValues <- calcCurrentStatus(bsd)
@@ -171,6 +175,7 @@ runWithBudget <- function(percentages, bsd){
   
   endValues <- calcCurrentStatus(bsd)
   
+  on.exit()
   return(c(percentages, startValues, endValues))
 }#END runWithBudget
 
@@ -193,9 +198,20 @@ runWithBudget <- function(percentages, bsd){
 #' @export
 runBatch <- function(batchBudg, bsd){
   require(parallel)
+  require(here)
+  on.exit(expr={
+    print(traceback())
+    saveRDS(mget(ls()), file=here::here("data/runBatch.rds"))
+  }
+  )
   
-  batchResults <- mclapply(batchBudg, runWithBudget,
-                           bsd=bsd, mc.cores=bsd$nCores)
+  if (bsd$debug){
+    batchResults <- lapply(batchBudg, runWithBudget,
+                           bsd=bsd)
+  } else{
+    batchResults <- mclapply(batchBudg, runWithBudget,
+                             bsd=bsd, mc.cores=bsd$nCores)
+  }
   # Remove results where budget was not valid
   batchResults <- batchResults[sapply(batchResults, 
                                       function(v) !any(is.na(v)))]
@@ -208,6 +224,7 @@ runBatch <- function(batchBudg, bsd){
                               paste0("end", c("PopMean", "PopSD", "VarMean")))
   batchResults <- batchResults %>% mutate(response = endVarMean - initPopMean)
   
+  on.exit()
   return(batchResults)
 }#END runBatch
 
@@ -229,6 +246,12 @@ runBatch <- function(batchBudg, bsd){
 #'
 #' @export
 findRedoBudgets <- function(simResults, bsd){
+  require(here)
+  on.exit(expr={
+    print(traceback())
+    saveRDS(mget(ls()), file=here::here("data/findRedoBudgets.rds"))
+  }
+  )
   # Non-Parametric LOESS response
   loFormula <- paste0("response ~ ", 
                       paste0(colnames(df)[1:bsd$nStages], collapse=" + "))
@@ -249,6 +272,7 @@ findRedoBudgets <- function(simResults, bsd){
   }
   whichUncert <- ndRows$simNum
   
+  on.exit()
   return(list(whichBest=whichBest, whichUncert=whichUncert))
 }#END findRedoBudgets
 
@@ -264,13 +288,7 @@ findRedoBudgets <- function(simResults, bsd){
 #'    2. Parameter space with high gain: high probability that it's best
 #' Go back to 1.
 #'
-#' @param batchSize Integer number of simulations between LOESS fits
-#' @param tolerance Numerical difference between min amd max 
-#' percentage budgets for all stages
-#' @param baseDir Directory if you want to have progress saved by batch. 
-#' Relative to R working directory. If not empty string, include final /
-#' @param maxNumBatches Integer to stop the simulations eventually if
-#' the algorithm is not narrowing in on optimal parameter values
+#' @param bsd List of breeding scheme data. Has parameters for optimization too.
 #' @return Numeric matrix with all simulation budget allocations, 
 #' gen mean change, gen std dev change, total cost.
 #' 
@@ -294,7 +312,7 @@ optimizeByLOESS <- function(bsd){
   results <- tibble()
   # 1. Make grid batch
   batch <- makeGrid(bsd)
-  while (batchesDone < maxNumBatches & !toleranceMet){
+  while (nBatchesDone < bsd$maxNumBatches & !toleranceMet){
     # 2. Run batch
     newBatchOut <- runBatch(batch, bsd)
     # 3. Evaluate stopping rule
@@ -328,7 +346,7 @@ optimizeByLOESS <- function(bsd){
       nSimClose=length(bestClose), bestGain=loPred$fit[bestGain],
       bestSE=bestSE))
     
-    batchesDone <- batchesDone + 1
+    nBatchesDone <- nBatchesDone + 1
     
     # Save batches and results
     if (!is.null(baseDir)){

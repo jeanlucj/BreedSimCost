@@ -8,12 +8,9 @@ TRUE
 # Species characteristics
 # Number of chromosomes
 nChr
-3
+4
 
 # Population characteristics
-# Number of founders
-nFounders
-400
 
 # Effective size of population generating the founders
 effPopSize
@@ -25,11 +22,11 @@ segSites
 
 # Number of QTL per chromosome
 nQTL
-40
+50
 
 # Number of observed SNP per chromosome
 nSNP
-100
+200
 
 # Initial genetic variance
 genVar
@@ -45,8 +42,8 @@ gxyxlVar
 
 # Mean and variance of dominance degree
 meanDD
-0.1
+0.0
 varDD
-0.01
+0.001
 relAA
 0.5

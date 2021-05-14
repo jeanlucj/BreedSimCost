@@ -4,7 +4,7 @@
 \alias{initializeProgram}
 \title{initializeProgram function}
 \usage{
-initializeProgram(founderFile, schemeFile, costFile)
+initializeProgram(founderFile, schemeFile, costFile, optimizationFile)
 }
 \arguments{
 \item{founderFile}{String name of the text file with parameters governing

@@ -11,16 +11,17 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ### Load packages
 ```{r load packages, message=TRUE}
-packages_used <- c("AlphaSimR", "tidyverse", "workflowr", "here", "devtools")
+packages_used <- c("BreedSimCost", "AlphaSimR", "tidyverse", 
+                   "workflowr", "here", "devtools")
 ip <- installed.packages()
 for (package in packages_used){
   if (!(package %in% ip[,"Package"])) install.packages(package)
 }
 
-devtools::install_github("jeanlucj/BreedSimCost", ref="master",
-                         build_vignettes=buildVignettes)
+# devtools::install_github("jeanlucj/BreedSimCost", ref="master",
+#                         build_vignettes=buildVignettes)
 
-here::i_am("analysis/UseBreedSimCost.Rmd")
+here::i_am("inst/UseBreedSimCost.Rmd")
 
 random_seed <- 45678
 set.seed(random_seed)
@@ -68,7 +69,7 @@ parents <- selectParentsBurnIn(bsd)
 bsd <- makeCrossesBurnIn(bsd, parents)
 
 # Year 3 and onward
-for (burnIn in 1:10){
+for (burnIn in 1:bsd$nBurnInCycles){
   bsd$year <- bsd$year+1
   bsd <- makeVarietyCandidates(bsd)
   

@@ -214,8 +214,7 @@ grmPhenoEval <- function(bsd){
   blup <- fm$U[[1]][[1]]
   # Ensure output has variation: needed for optimal contributions
   if (sd(blup) == 0){ # In this case, random selection
-    whoNeedsVar <- setdiff(names(blup), bsd$varietyCandidates)
-    blup[whoNeedsVar] <- runif(length(whoNeedsVar))
+    blup <- runif(length(blup))
   }
   return(blup)
 }

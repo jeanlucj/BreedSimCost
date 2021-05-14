@@ -4,7 +4,7 @@
 \alias{calcBudget}
 \title{calcBudget function}
 \usage{
-calcBudget(bsd, nEntries = NULL, nBreedingProg = NULL)
+calcBudget(bsd)
 }
 \arguments{
 \item{bsd}{List of breeding sheme data}
