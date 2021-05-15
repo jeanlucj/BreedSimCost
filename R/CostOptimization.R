@@ -135,6 +135,8 @@ makeGrid <- function(bsd){
 #' @param percentages Double vector 1 + nStages with budget percentages for 
 #' the population improvement cycle and the variety development pipeline
 #' @param bsd List of breeding scheme data
+#' @param returnBSD Logical if you want to return bsd because this is a one-off
+#' rather than being called repeatedly for optimization
 #'  
 #' @return Vector with initial and end means and variances
 #'
@@ -144,12 +146,14 @@ makeGrid <- function(bsd){
 #' bsd <- runWithBudget(percentages, bsd)
 #'
 #' @export
-runWithBudget <- function(percentages, bsd){
-  require(here)
-  on.exit(expr={
-            print(traceback())
-            saveRDS(mget(ls()), file=here::here("data/runWithBudget.rds"))
-          })
+runWithBudget <- function(percentages, bsd, returnBSD=F){
+  if (bsd$debug){
+    require(here)
+    on.exit(expr={
+      print(traceback())
+      saveRDS(mget(ls()), file=here::here("data/runWithBudget.rds"))
+    })
+  }
 
   s <- Sys.time()
   percentages <- unlist(percentages)
@@ -183,8 +187,12 @@ runWithBudget <- function(percentages, bsd){
   endValues <- calcCurrentStatus(bsd)
   if (bsd$verbose) print(Sys.time() - s)
   
-  on.exit()
-  return(c(percentages, startValues, endValues))
+  if (bsd$debug) on.exit()
+  if (returnBSD){
+    return(bsd)
+  } else{
+    return(c(percentages, startValues, endValues))
+  }
 }#END runWithBudget
 
 #' runBatch function
@@ -206,11 +214,13 @@ runWithBudget <- function(percentages, bsd){
 #' @export
 runBatch <- function(batchBudg, bsd){
   require(parallel)
-  require(here)
-  on.exit(expr={
-            print(traceback())
-            saveRDS(mget(ls()), file=here::here("data/runBatch.rds"))
-          })
+  if (bsd$debug){
+    require(here)
+    on.exit(expr={
+      print(traceback())
+      saveRDS(mget(ls()), file=here::here("data/runBatch.rds"))
+    })
+  }
 
   if (bsd$debug){
     batchResults <- lapply(batchBudg, runWithBudget,
@@ -231,7 +241,7 @@ runBatch <- function(batchBudg, bsd){
                               paste0("end", c("PopMean", "PopSD", "VarMean")))
   batchResults <- batchResults %>% mutate(response = endVarMean - initPopMean)
   
-  on.exit()
+  if (bsd$debug) on.exit()
   return(batchResults)
 }#END runBatch
 
@@ -253,12 +263,13 @@ runBatch <- function(batchBudg, bsd){
 #'
 #' @export
 findRedoBudgets <- function(bsd, results){
-  require(here)
-  on.exit(expr={
-    print(traceback())
-    saveRDS(mget(ls()), file=here::here("data/findRedoBudgets.rds"))
+  if (bsd$debug){  require(here)
+    on.exit(expr={
+      print(traceback())
+      saveRDS(mget(ls()), file=here::here("data/findRedoBudgets.rds"))
+    })
   }
-  )
+  
   # Non-Parametric LOESS response
   loFormula <- paste0("response ~ ", 
                       paste0(colnames(results)[1:bsd$nStages], collapse=" + "))
@@ -279,7 +290,7 @@ findRedoBudgets <- function(bsd, results){
   }
   whichUncert <- ndRows$simNum
   
-  on.exit()
+  if (bsd$debug) on.exit()
   return(list(whichBest=whichBest, whichUncert=whichUncert))
 }#END findRedoBudgets
 
@@ -306,12 +317,13 @@ findRedoBudgets <- function(bsd, results){
 #' 
 #' @export
 optimizeByLOESS <- function(bsd){
-  require(here)
-  on.exit(expr={
+  if (bsd$debug){
+    require(here)
+    on.exit(expr={
       print(traceback())
       saveRDS(mget(ls()), file=here::here("data/optimizeByLOESS.rds"))
-    }
-  )
+    })
+  }
   
   nBatchesDone <- 0
   toleranceMet <- FALSE
@@ -357,11 +369,15 @@ optimizeByLOESS <- function(bsd){
     
     nBatchesDone <- nBatchesDone + 1
     
-    # Save batches and results
-    saveRDS(results, file=here::here("data/allBatches.rds"))
-    saveRDS(allPercRanges, file=here::here("data/allPercentRanges.rds"))
+    if (bsd$saveIntermediateResults){
+      # Save batches and results
+      require(here)
+      saveRDS(results, file=here::here("data/allBatches.rds"))
+      saveRDS(allPercRanges, file=here::here("data/allPercentRanges.rds"))
+    }
+    
   }#END go through batches
 
-  on.exit()
+  if (bsd$debug) on.exit()
   return(list(results=results, allPercentRanges=allPercRanges))
 }

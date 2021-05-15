@@ -57,11 +57,14 @@ runVDPtrial <- function(bsd, trialType, entries){
 #'
 #' @export
 chooseTrialEntries <- function(bsd, toTrial, fromTrial=NULL){
-  require(here)
-  on.exit(expr={
-    print(traceback())
-    saveRDS(mget(ls()), file=here::here("data/chooseTrialEntries.rds"))
-  })
+  if (bsd$debug){
+    require(here)
+    on.exit(expr={
+      print(traceback())
+      saveRDS(mget(ls()), file=here::here("data/chooseTrialEntries.rds"))
+    })
+  }
+  
   if (toTrial == bsd$stageNames[1]){
     nInd <- nInd(bsd$varietyCandidates)
     nIndMax <- min(nInd, bsd$nEntries[1])
@@ -88,7 +91,7 @@ chooseTrialEntries <- function(bsd, toTrial, fromTrial=NULL){
     crit <- crit[candidates]
     entries <- crit[(crit %>% order(decreasing=T))[1:nToSelect]] %>% names
   }
-  on.exit()
+  if (bsd$debug) on.exit()
   return(entries)
 }
 
