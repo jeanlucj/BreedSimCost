@@ -57,6 +57,11 @@ runVDPtrial <- function(bsd, trialType, entries){
 #'
 #' @export
 chooseTrialEntries <- function(bsd, toTrial, fromTrial=NULL){
+  require(here)
+  on.exit(expr={
+    print(traceback())
+    saveRDS(mget(ls()), file=here::here("data/chooseTrialEntries.rds"))
+  })
   if (toTrial == bsd$stageNames[1]){
     nInd <- nInd(bsd$varietyCandidates)
     nIndMax <- min(nInd, bsd$nEntries[1])
@@ -83,6 +88,7 @@ chooseTrialEntries <- function(bsd, toTrial, fromTrial=NULL){
     crit <- crit[candidates]
     entries <- crit[(crit %>% order(decreasing=T))[1:nToSelect]] %>% names
   }
+  on.exit()
   return(entries)
 }
 
@@ -108,13 +114,19 @@ makeVarietyCandidates <- function(bsd, breedPopIDs=NULL){
   nInd <- length(breedPopIDs)
   nCandidates <- max(bsd$nEntries)
   nDH <- nCandidates %/% nInd
-  newCand <- makeDH(bsd$breedingPop[breedPopIDs], nDH=nDH, simParam=bsd$SP)
+  if (nDH > 0){
+    newCand <- makeDH(bsd$breedingPop[breedPopIDs], nDH=nDH, simParam=bsd$SP)
+  }
   nExtra <- nCandidates %% nInd
   if (nExtra > 0){
     whichPar <- sample(nInd, nExtra)
-    newCand <- c(newCand, makeDH(bsd$breedingPop[breedPopIDs][whichPar], 
-                                 nDH=1, simParam=bsd$SP)
-    )
+    extraCand <- makeDH(bsd$breedingPop[breedPopIDs][whichPar], 
+                        nDH=1, simParam=bsd$SP)
+    if (exists("newCand")){
+      newCand <- c(newCand, extraCand)
+    } else{
+      newCand <- extraCand
+    }
   }
   # Update varietyCandidates population
   if (exists("varietyCandidates", bsd)){

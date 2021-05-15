@@ -11,17 +11,22 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ### Load packages
 ```{r load packages, message=TRUE}
-packages_used <- c("BreedSimCost", "AlphaSimR", "tidyverse", 
-                   "workflowr", "here", "devtools")
 ip <- installed.packages()
+packages_used <- c("AlphaSimR", "tidyverse", 
+                   "workflowr", "here", "devtools")
 for (package in packages_used){
   if (!(package %in% ip[,"Package"])) install.packages(package)
 }
 
-# devtools::install_github("jeanlucj/BreedSimCost", ref="master",
-#                         build_vignettes=buildVignettes)
+packages_devel <- c("BreedSimCost")
+for (package in packages_devel){
+  if (!(package %in% ip[,"Package"])){
+    devtools::install_github(paste0("jeanlucj/", package), ref="master",
+                             build_vignettes=F)
+  }
+}
 
-here::i_am("inst/UseBreedSimCost.Rmd")
+here::i_am("analysis/BreedSimCostTest.Rmd")
 
 random_seed <- 45678
 set.seed(random_seed)
@@ -31,16 +36,11 @@ set.seed(random_seed)
 ### Illustrate using the functions in SimpleBreedSim
 
 ```{r Initialize program}
-pathToSimDirectory <- path.package("BreedSimCost")
-if (pathToSimDirectory == "/Users/jj332/Documents/GitRepo/BreedSimCost"){
-  pathToSimDirectory <- paste0(pathToSimDirectory, "/inst")
-}
-
 bsd <- initializeProgram(
-         paste0(pathToSimDirectory, "/", "FounderCtrlFile.txt"),
-         paste0(pathToSimDirectory, "/", "SchemeCtrlFile.txt"),
-         paste0(pathToSimDirectory, "/", "CostsCtrlFile.txt"), 
-         paste0(pathToSimDirectory, "/", "OptimizationCtrlFile.txt")
+         here::here("data", "FounderCtrlFile.txt"),
+         here::here("data", "SchemeCtrlFile.txt"),
+         here::here("data", "CostsCtrlFile.txt"), 
+         here::here("data", "OptimizationCtrlFile.txt")
                          )
 ```
 
@@ -91,7 +91,7 @@ burnedInBSD <- bsd
 ```{r Function to run one replication of your breeding scheme}
 # This is code from the package that you can run
 # In the package, it's in the function runWithBudget
-
+if (FALSE){
   startValues <- calcCurrentStatus(bsd)
   
   for (twoPart in 1:bsd$nCyclesToRun){
@@ -116,6 +116,7 @@ burnedInBSD <- bsd
 
   print(startValues)
   print(endValues)
+}
 ```
 
 ### The main interface for optimizing budgets

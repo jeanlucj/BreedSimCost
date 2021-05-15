@@ -2,7 +2,7 @@
 #'
 #' Once the costs are specified in bsd, this function calculates the total annual budget for the breeding scheme
 #'
-#' @param bsd List of breeding sheme data
+#' @param bsd List of breeding scheme data
 #' @return The bsd list with updated intermediate and total costs
 #'
 #' @details Call this function once costs have been specified
@@ -78,14 +78,16 @@ budgetToScheme <- function(percentages, bsd){
   
   # Variety Development Pipeline budget
   costPerEntry <- bsd$plotCosts * bsd$nReps * bsd$nLocs + bsd$qcGenoCost
-  costPerEntry[1] <- bsd$candidateDevelCost + bsd$wholeGenomeCost
+  costPerEntry[1] <- costPerEntry[1] + 
+    bsd$candidateDevelCost + bsd$wholeGenomeCost
   stageBudgets <- targetBudget * percentages[-1]
   nEntries <- round(stageBudgets / costPerEntry)
+  names(nEntries) <- bsd$stageNames
   failure <- any(diff(nEntries) > 0) # Ensure that nEntries gets smaller
   
   bsd$realizedBudget <- NA
   if (!failure){
-    bsd$realizedBudget <- calcBudget(bsd)
+    bsd <- calcBudget(bsd)
     bsd$nBreedingProg <- nBreedingProg
     bsd$nEntries <- nEntries
   }
@@ -145,13 +147,18 @@ makeGrid <- function(bsd){
 runWithBudget <- function(percentages, bsd){
   require(here)
   on.exit(expr={
-    print(traceback())
-    saveRDS(mget(ls()), file=here::here("data/runWithBudget.rds"))
-  }
-  )
-  print(percentages)
+            print(traceback())
+            saveRDS(mget(ls()), file=here::here("data/runWithBudget.rds"))
+          })
+
+  s <- Sys.time()
+  percentages <- unlist(percentages)
   bsd <- budgetToScheme(percentages, bsd)
-  if (bsd$failure) return(c(percentages, NA))
+  if (bsd$verbose) cat(percentages, bsd$failure, "\n")
+  if (bsd$failure){
+    print(Sys.time() - s)
+    return(c(percentages, NA))
+  }
   
   startValues <- calcCurrentStatus(bsd)
   
@@ -174,6 +181,7 @@ runWithBudget <- function(percentages, bsd){
   }
   
   endValues <- calcCurrentStatus(bsd)
+  if (bsd$verbose) print(Sys.time() - s)
   
   on.exit()
   return(c(percentages, startValues, endValues))
@@ -200,11 +208,10 @@ runBatch <- function(batchBudg, bsd){
   require(parallel)
   require(here)
   on.exit(expr={
-    print(traceback())
-    saveRDS(mget(ls()), file=here::here("data/runBatch.rds"))
-  }
-  )
-  
+            print(traceback())
+            saveRDS(mget(ls()), file=here::here("data/runBatch.rds"))
+          })
+
   if (bsd$debug){
     batchResults <- lapply(batchBudg, runWithBudget,
                            bsd=bsd)
@@ -234,7 +241,7 @@ runBatch <- function(batchBudg, bsd){
 #' gain and the budgets with high gain but also high uncertainty
 #' 
 #' @param bsd List of breeding scheme data
-#' @param simResults List with the results of simulations so far
+#' @param results List with the results of simulations so far
 #'  
 #' @return List of two vectors one with high gain budgets
 #' and one with uncertainty budgets
@@ -242,10 +249,10 @@ runBatch <- function(batchBudg, bsd){
 #' @details Call this function to choose which budgets to try again
 #'
 #' @examples
-#' bsd <- findRedoBudgets(percentages, bsd)
+#' bsd <- findRedoBudgets(bsd, results)
 #'
 #' @export
-findRedoBudgets <- function(simResults, bsd){
+findRedoBudgets <- function(bsd, results){
   require(here)
   on.exit(expr={
     print(traceback())
@@ -254,10 +261,10 @@ findRedoBudgets <- function(simResults, bsd){
   )
   # Non-Parametric LOESS response
   loFormula <- paste0("response ~ ", 
-                      paste0(colnames(df)[1:bsd$nStages], collapse=" + "))
-  loFM <- loess(loFormula, data=simResults, degree=1)
+                      paste0(colnames(results)[1:bsd$nStages], collapse=" + "))
+  loFM <- loess(loFormula, data=results, degree=1)
   loPred <- predict(loFM, se=T)
-  loPred <- tibble(fit=loPred$fit, se=loPred$se.fit, simNum=1:nrow(simResults))
+  loPred <- tibble(fit=loPred$fit, se=loPred$se.fit, simNum=1:nrow(results))
   # Budgets with the highest response
   whichBest <- order(loPred$fit, decreasing=T)[1:bsd$nHighGain]
   # Budgets with the high response and high uncertainty
@@ -268,7 +275,7 @@ findRedoBudgets <- function(simResults, bsd){
   keep <- which(fitDist < ndRows$se*4)
   ndRows <- ndRows[keep,]
   if (nrow(ndRows) > bsd$nUncertain){
-    ndRows <- ndRows[order(ndRows$fit, decreasing=T)[1:nByPareto],]
+    ndRows <- ndRows[order(ndRows$fit, decreasing=T)[1:bsd$nUncertain],]
   }
   whichUncert <- ndRows$simNum
   
@@ -322,19 +329,21 @@ optimizeByLOESS <- function(bsd){
                    paste0(colnames(results)[1:bsd$nStages], collapse=" + "))
     loFM <- loess(loFormula, data=results, degree=1)
     loPred <- predict(loFM, se=T)
-    loPred <- tibble(simNum=1:nrow(results), fit=loPred$fit, se=loPred$se.fit, results)
+    loPred <- tibble(simNum=1:nrow(results), fit=loPred$fit, 
+                     se=loPred$se.fit, results)
     # 4. Evaluate stopping rule
     bestGain <- which.max(loPred$fit)
     bestSE <- loPred$se[bestGain]
-    bestClose <- which(loPred$fit[bestGain] - loPred$fit < bestSE)
+    bestClose <- which(loPred$fit[bestGain] - loPred$fit < 2*bestSE)
     percRanges <- results %>% slice(bestClose) %>% 
       dplyr::select(contains("perc")) %>% summarise_all(range)
-    toleranceMet <- all(percRanges %>% summarise_all(diff) < tolerance)
+    toleranceMet <- all(percRanges %>% 
+                                 summarise_all(diff) < bsd$tolerance)
     if (!toleranceMet){
       # 5. Find which budgets to rerun
-      redoSims <- findRedoBudgets(results, bsd) %>% unlist
+      redoSims <- findRedoBudgets(bsd, results) %>% unlist
       batch <- lapply(redoSims, function(idx) 
-        results %>% slice(idx) %>% pull(1:(bsd$nStages+1)))
+        results %>% slice(idx) %>% dplyr::select(contains("perc")))
       combineBudg <- function(dummy, batch){
         twoBudg <- sample(length(batch), 2)
         return(0.9 * batch[[twoBudg[1]]] + 0.1 * batch[[twoBudg[2]]])
@@ -342,17 +351,15 @@ optimizeByLOESS <- function(bsd){
       batch <- c(batch, 
                  lapply(1:(bsd$batchSize - length(batch)), combineBudg, batch))
     }
-    allPercRanges <- c(allPercRanges, list(percRanges, 
+    allPercRanges <- c(allPercRanges, list(list(percRanges, 
       nSimClose=length(bestClose), bestGain=loPred$fit[bestGain],
-      bestSE=bestSE))
+      bestSE=bestSE)))
     
     nBatchesDone <- nBatchesDone + 1
     
     # Save batches and results
-    if (!is.null(baseDir)){
-      saveRDS(results, file=here::here("data/allBatches.rds"))
-      saveRDS(allPercRanges, file=here::here("data/allPercentRanges.rds"))
-    }
+    saveRDS(results, file=here::here("data/allBatches.rds"))
+    saveRDS(allPercRanges, file=here::here("data/allPercentRanges.rds"))
   }#END go through batches
 
   on.exit()

@@ -4,12 +4,10 @@
 \alias{selectParents}
 \title{selectParents function}
 \usage{
-selectParents(bsd, nToSelect)
+selectParents(bsd)
 }
 \arguments{
 \item{bsd}{The breeding scheme data list}
-
-\item{nToSelect}{The number of IDs to return that have the highest BLUPs}
 }
 \value{
 Data.frame with pedigree ccMat-based optimal contributions
@@ -24,6 +22,6 @@ then calculates optimal contributions with those GEBVs and a pedigree-based
 coefficient of coancestry matrix.
 }
 \examples{
-optCont <- selectParents(bsd, nToSelect)]
+optCont <- selectParents(bsd)]
 
 }

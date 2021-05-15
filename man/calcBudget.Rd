@@ -7,7 +7,7 @@
 calcBudget(bsd)
 }
 \arguments{
-\item{bsd}{List of breeding sheme data}
+\item{bsd}{List of breeding scheme data}
 }
 \value{
 The bsd list with updated intermediate and total costs

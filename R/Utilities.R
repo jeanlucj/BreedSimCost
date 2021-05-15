@@ -28,12 +28,12 @@ initializeProgram <- function(founderFile, schemeFile,
                  "relAA")
   bsd <- readControlFile(founderFile, parmNames)
 
-  # Read parameters about trial types
+  # Read parameters about the overall scheme
   parmNames <- c("nCyclesToRun", "nBurnInCycles", "nStages", "stageNames", 
                  "nEntries", "nReps", "nLocs", "errVars",
                  "seedNeeded", "seedProduced", "optiContEffPop",
                  "nBreedingProg", "nPopImpCycPerYear", "keepNTrainingCyc", 
-                 "keepNBreedingCyc")
+                 "keepNBreedingCyc", "varietiesCanBeParents")
   bsdNew <- readControlFile(schemeFile, parmNames)
   bsd <- c(bsd, bsdNew)
   
@@ -47,7 +47,7 @@ initializeProgram <- function(founderFile, schemeFile,
   parmNames <- c("nCores", "minPercentage", "maxPercentage",
                  "percentageStep", "minNBreedingProg",
                  "tolerance", "batchSize", "maxNumBatches",
-                 "nHighGain", "nUncertain", "debug")
+                 "nHighGain", "nUncertain", "debug", "verbose")
   bsdNew <- readControlFile(optimizationFile, parmNames)
   bsd <- c(bsd, bsdNew)
   
@@ -198,6 +198,8 @@ calcDerivedParms <- function(bsd){
 
   bsd$quickHaplo <- makeLogical(bsd$quickHaplo)
   bsd$debug <- makeLogical(bsd$debug)
+  bsd$verbose <- makeLogical(bsd$verbose)
+  bsd$varietiesCanBeParents <- makeLogical(bsd$varietiesCanBeParents)
   
   # Genetic architecture defaults
   if (nv(bsd$meanDD)) bsd$meanDD <- 0

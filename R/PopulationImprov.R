@@ -5,24 +5,25 @@
 #' to advance the population
 #'
 #' @param bsd The breeding scheme data list
-#' @param nToSelect The number of IDs to return that have the highest BLUPs
 #' @return Data.frame with pedigree ccMat-based optimal contributions
 #' @details Accesses phenoRecords to predict GEBVs among breeding population
 #' then calculates optimal contributions with those GEBVs and a pedigree-based
 #' coefficient of coancestry matrix.
 #'
 #' @examples
-#' optCont <- selectParents(bsd, nToSelect)]
+#' optCont <- selectParents(bsd)]
 #'
 #' @export
-selectParents <- function(bsd, nToSelect){
+selectParents <- function(bsd){
   # Get GEBVs
   gebv <- grmPhenoEval(bsd)
-  # Keep only breeding population
-  nInd <- nInd(bsd$breedingPop)
-  nIndMax <- min(nInd, bsd$nBreedingProg*bsd$keepNBreedingCyc)
-  selCan <- bsd$breedingPop@id[nInd - (nIndMax - 1):0]
-  gebv <- gebv[selCan]
+  if (!bsd$varietiesCanBeParents){
+    # Keep only breeding population
+    nInd <- nInd(bsd$breedingPop)
+    nIndMax <- min(nInd, bsd$nBreedingProg*bsd$keepNBreedingCyc)
+    selCan <- bsd$breedingPop@id[nInd - (nIndMax - 1):0]
+    gebv <- gebv[selCan]
+  }
   # Set up to use optiSel
   # 1. data.frame with a column named "Indiv" that has individual ids,
   # and a column named however you want with the selection criterion.
@@ -214,7 +215,9 @@ grmPhenoEval <- function(bsd){
   blup <- fm$U[[1]][[1]]
   # Ensure output has variation: needed for optimal contributions
   if (sd(blup) == 0){ # In this case, random selection
+    nb <- names(blup)
     blup <- runif(length(blup))
+    names(blup) <- nb
   }
   return(blup)
 }

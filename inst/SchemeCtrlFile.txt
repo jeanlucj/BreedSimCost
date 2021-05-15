@@ -58,3 +58,13 @@ keepNTrainingCyc
 # Number of cycles back of breeding individuals as parent candidates
 keepNBreedingCyc
 1
+
+# Can candidates in the variety development pipeline be used
+# as parents in the population improvement cycle?  Setting
+# this to true may be useful if `makeVarietyCandidates`
+# is equivalent to cloning
+# WARNING: if TRUE any VDP candidate in keepNTrainingCyc
+# WARNING: can be used as a parent. You may want to restrict
+# WARNING: it to VDP candidates that are > 1 year old
+varietiesCanBeParents
+FALSE
