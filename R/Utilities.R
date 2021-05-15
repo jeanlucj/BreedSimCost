@@ -260,95 +260,109 @@ calcCurrentStatus <- function(bsd){
            varCandMean=varCandMean))
 }
 
-#' loessForNsim function NOT FINISHED
+#' loessPredCount function
 #'
-#' Make a nice hexbin plot with results from optimization.
+#' Summarize data from simulations in a form to make a nice hexbin plot
+#' Return both counts in bins and bin means
 #'
-#' @param bsd List of breeding program data
-#' @return A vector extracting breeding population means and variances
+#' @param nSim Integer Predictions and counts for the first nSim simulations
+#' @param resultMat Tibble the simulation results
+#' @param xlim Real max and min for plot
+#' @param ylim Real max and min for plot
+#' @param budg1 Integer which column of percent budget to make plot for x-axis
+#' @param budg2 Integer which column of percent budget to make plot for y-axis
+#' @return A list with bin counts and means and results from LOESS predictions
 #'
-#' @details This function is only called internally by other functions used to specify the pipeline
+#' @details Use the hexbin function to tabulate 2D bins in hexagonal array
 #'
 #' @export
-loessForNsim <- function(nSim, allBatches, nToRepeat, rand=FALSE, 
-                         xlim=NULL, ylim=NULL, budg1=1, budg2=2){
-  # Frame for hexbin plots
+loessPredCount <- function(nSim=nrow(resultMat), resultMat, 
+                      xlim=NULL, ylim=NULL, 
+                      budg1=1, budg2=2){
+  require(hexbin)
   if (is.null(xlim)){
-    xlim <- c(floor(min(allBatches[,budg1])*50-0.5)/50, 
-              ceiling(max(allBatches[,budg1])*50+0.5)/50)
+    xlim <- c(floor(min(resultMat[,budg1])*50-0.5)/50, 
+              ceiling(max(resultMat[,budg1])*50+0.5)/50)
   }
   if (is.null(ylim)){
-    ylim <- c(floor(min(allBatches[,budg2])*50-0.5)/50, 
-              ceiling(max(allBatches[,budg2])*50+0.5)/50)
+    ylim <- c(floor(min(resultMat[,budg2])*50-0.5)/50, 
+              ceiling(max(resultMat[,budg2])*50+0.5)/50)
   }
-
-  sims <- 1:nSim
-  if (rand) sims <- sort(sample(nrow(allBatches), nSim))
-  uptoBatches <- allBatches[sims,]
   
-  stageNames <- colnames(allBatches)[grep("budget", colnames(allBatches))]
-  stageNames <- stageNames %>% substring(8)
-  
-  # Non-Parametric LOESS response
-  loFormula <- paste0("response ~ ", paste0(paste0("budget.", stageNames[-1]), collapse=" + "))
-  loFM <- loess(loFormula, data=uptoBatches)
+  uptoResults <- resultMat[1:nSim,]
+  predictors <- resultMat %>% colnames %>% stringr::str_subset("perc")
+  predictors <- predictors[-length(predictors)]
+  loFormula <- paste0("response ~ ", paste0(predictors, collapse=" + "))
+  loFM <- stats::loess(loFormula, data=uptoResults)
   loPred <- predict(loFM, se=T)
   
-  # choose which have high response and high std. err. of response
-  # Use Pareto front, looking for high fit and high std. err.
-  paretoRepeat <- NULL
-  fitStdErr <- tibble(batchID=1:nrow(uptoBatches), fit=loPred$fit, se=loPred$se.fit)
-  while (length(paretoRepeat) < nToRepeat){
-    nonDomSim <- findNonDom(fitStdErr, dir1Low=F, dir2Low=F, var1name="fit", var2name="se")
-    nds <- nonDomSim$batchID
-    if (length(nds) > nToRepeat - length(paretoRepeat)){
-      nds <- sample(nds, nToRepeat - length(paretoRepeat))
-    }
-    paretoRepeat <- c(paretoRepeat, nds)
-    fitStdErr <- fitStdErr %>% dplyr::filter(!(batchID %in% nds))
+  # Make the bins!
+  bins <- hexbin::hexbin(cbind(uptoResults[,budg1], uptoResults[,budg2]), 
+                 xbnds=xlim, ybnds=ylim)
+  
+  # Mean gain for each hexagon
+  calcDistToCell <- function(hex){
+    xcm <- bins@xcm[hex]; ycm <- bins@ycm[hex]
+    sqrt((uptoResults[,budg1] - xcm)^2 + (uptoResults[,budg2] - ycm)^2)
   }
-  fitStdErr <- tibble(batchID=1:nrow(uptoBatches), fit=loPred$fit, se=loPred$se.fit)
-  plot(fitStdErr$fit, fitStdErr$se)
-  points(fitStdErr$fit[paretoRepeat], fitStdErr$se[paretoRepeat], pch=16, col=2, cex=0.8)
-  # Use ones that have the best chance of beating the current best
-  bestGain <- max(fitStdErr$fit)
-  probBetter <- pnorm(bestGain, fitStdErr$fit, fitStdErr$se, lower.tail=FALSE)
-  hiProb <- order(probBetter, decreasing=T)[1:nToRepeat]
-  hist(probBetter[hiProb])
-  hist(hiProb)
-  plot(fitStdErr$fit, fitStdErr$se)
-  points(fitStdErr$fit[hiProb], fitStdErr$se[hiProb], pch=16, col=2, cex=0.8)
+  allDist <- lapply(1:bins@ncells, calcDistToCell)
+  allDist <- matrix(unlist(allDist), nSim)
+  closeBin <- apply(allDist, 1, which.min)
+  # If bin empty steal observation closest to that bin not sure why this happens
+  occBins <- sort(unique(closeBin))
+  emptyBins <- setdiff(1:max(occBins), occBins)
+  wme <- apply(allDist[,emptyBins, drop=F], 2, which.min)
+  closeBin[wme] <- emptyBins
+  calcBinMean <- function(bin){
+    mean(loFM$fitted[closeBin == bin])
+  }
+  binMean <- sapply(1:bins@ncells, calcBinMean)
   
-  bestFit <- which.max(loPred$fit)
-  bestSE <- loPred$se.fit[bestFit]
+  highCt <- which.max(bins@count)
+  hiCtXY <- c(bins@xcm[highCt], bins@ycm[highCt])
+  bestFit <- which.max(binMean)
+  hiGainXY <- c(bins@xcm[bestFit], bins@ycm[bestFit])
+
+  return(list(loPred=loPred, bins=bins, closeBin=closeBin, 
+              binMean=binMean, hiCtXY=hiCtXY, hiGainXY=hiGainXY))
+}#END loessPredCount
+
+#' plotLoessPred function
+#'
+#' Make a nice hexbin plot with the summary from loessPredCount
+#'
+#' @param nSim Integer Predictions and counts for the first nSim simulations
+#' @param resultMat Tibble the simulation results
+#' @param xlim Real max and min for plot
+#' @param ylim Real max and min for plot
+#' @param budg1 Integer which column of percent budget to make plot for x-axis
+#' @param budg2 Integer which column of percent budget to make plot for y-axis
+#' @param binMeanContrast Numeric a higher value makes the peak stand out more
+#' @return A list with bin counts and means and results from LOESS predictions
+#'
+#' @details Makes a plot
+#'
+#' @export
+plotLoessPred <- function(nSim=nrow(resultMat), resultMat, 
+                     xlim=NULL, ylim=NULL, 
+                     budg1=1, budg2=2, binMeanContrast=3){
+  require(hexbin)
+  require(grid)
+  lpc <- loessPredCount(nSim, resultMat, xlim=NULL, 
+                        ylim=NULL, budg1=1, budg2=2)
+  bmc <- binMeanContrast
   
-  # Plot all and circle best
-  bins <- hexbin(cbind(uptoBatches[,budg1], uptoBatches[,budg2]), xbnds=xlim, ybnds=ylim)
-  p <- plot(bins, xlab=names(budg1), ylab=names(budg2), main=nSim)
+  binMeanRange <- diff(range(lpc$binMean))^bmc
+  meanAsCount <- 999*(lpc$binMean - min(lpc$binMean))^bmc / binMeanRange %>%
+                      round + 1
+  nSim <- lpc$bins@n
+  lpc$bins@count <- meanAsCount
+  main <- paste0(nSim, ": ", paste(round(range(lpc$binMean), 1), collapse=" to "))
+  
+  p <- plot(lpc$bins, main=main, legend=FALSE)
   pushHexport(p$plot.vp)
-  grid.points(uptoBatches[bestFit, budg1], uptoBatches[bestFit, budg2], gp=gpar(col="red"))
+  grid::grid.points(lpc$hiCtXY[1], lpc$hiCtXY[2], gp=gpar(col=3))
+  grid::grid.points(lpc$hiGainXY[1], lpc$hiGainXY[2], gp=gpar(col="red"))
   upViewport()
-  
-  # Plot Pareto repeats
-  bins <- hexbin(cbind(uptoBatches[paretoRepeat, budg1], uptoBatches[paretoRepeat, budg2]), xbnds=xlim, ybnds=ylim)
-  pdf(paste0("_pdfs/RepPareto", nSim, ".pdf"))
-  p <- plot(bins, xlab=names(budg1), ylab=names(budg2), main=paste("Rep. Pareto", nSim), legend=FALSE)
-  pushHexport(p$plot.vp)
-  grid.points(uptoBatches[bestFit, budg1], uptoBatches[bestFit, budg2], gp=gpar(col="red"))
-  upViewport()
-  dev.off()
-  
-  # Plot high probability repeats
-  bins <- hexbin(cbind(uptoBatches[hiProb, budg1], uptoBatches[hiProb, budg2]), xbnds=xlim, ybnds=ylim)
-  pdf(paste0("_pdfs/RepBest", nSim, ".pdf"))
-  p <- plot(bins, xlab=names(budg1), ylab=names(budg2), main=paste("Rep. Best", nSim), legend=FALSE)
-  pushHexport(p$plot.vp)
-  grid.points(uptoBatches[bestFit, budg1], uptoBatches[bestFit, budg2], gp=gpar(col="red"))
-  upViewport()
-  dev.off()
-  
-  whichClose <- which(max(loPred$fit) - loPred$fit < bestSE)
-  print(paste("Number of Sims <1 StdErr to best", length(whichClose)))
-  nClose <- sum(max(loPred$fit) - loPred$fit < 2*bestSE)
-  return(c(bestFit=loPred$fit[bestFit], bestSE=bestSE, nClose=nClose, loPred=loPred, probBetter=probBetter))
-}
+  return(lpc)
+}#END plotLoessPred

@@ -235,7 +235,10 @@ runBatch <- function(batchBudg, bsd){
   nParmsInResults <- length(batchResults[[1]])
   batchResults <- batchResults %>% unlist %>% matrix(nrow=nParmsInResults) %>% 
     t %>% as_tibble(.name_repair="universal")
-  # WARNING numbers here are hardcoded based on calcCurrentStatus
+  invisible(capture.output(
+    batchResults <- as_tibble(batchResults, .name_repair="universal")
+  ))
+  # WARNING names here are hardcoded based on calcCurrentStatus
   colnames(batchResults) <- c(paste0("perc", c("PIC", bsd$stageNames)),
                               paste0("init", c("PopMean", "PopSD", "VarMean")),
                               paste0("end", c("PopMean", "PopSD", "VarMean")))
