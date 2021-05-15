@@ -4,13 +4,16 @@
 \alias{runWithBudget}
 \title{runWithBudget function}
 \usage{
-runWithBudget(percentages, bsd)
+runWithBudget(percentages, bsd, returnBSD = F)
 }
 \arguments{
 \item{percentages}{Double vector 1 + nStages with budget percentages for 
 the population improvement cycle and the variety development pipeline}
 
 \item{bsd}{List of breeding scheme data}
+
+\item{returnBSD}{Logical if you want to return bsd because this is a one-off
+rather than being called repeatedly for optimization}
 }
 \value{
 Vector with initial and end means and variances

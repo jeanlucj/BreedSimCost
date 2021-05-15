@@ -1,11 +1,15 @@
 # Implementation details for optimization
 # Get rid of parallel processing if debugging
 debug
-TRUE
+FALSE
 
 # Print stuff as the optimization goes along
 verbose
 FALSE
+
+# Save intermediate results as you go along
+saveIntermediateResults
+TRUE
 
 # Number of cores for parallel processing
 nCores
@@ -46,4 +50,4 @@ nHighGain
 
 #When redoing simulations, how many should be high uncertainty?
 nUncertain
-4
+5

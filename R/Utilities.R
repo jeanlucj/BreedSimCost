@@ -47,7 +47,8 @@ initializeProgram <- function(founderFile, schemeFile,
   parmNames <- c("nCores", "minPercentage", "maxPercentage",
                  "percentageStep", "minNBreedingProg",
                  "tolerance", "batchSize", "maxNumBatches",
-                 "nHighGain", "nUncertain", "debug", "verbose")
+                 "nHighGain", "nUncertain", "debug", 
+                 "verbose", "saveIntermediateResults")
   bsdNew <- readControlFile(optimizationFile, parmNames)
   bsd <- c(bsd, bsdNew)
   
@@ -199,6 +200,7 @@ calcDerivedParms <- function(bsd){
   bsd$quickHaplo <- makeLogical(bsd$quickHaplo)
   bsd$debug <- makeLogical(bsd$debug)
   bsd$verbose <- makeLogical(bsd$verbose)
+  bsd$saveIntermediateResults <- makeLogical(bsd$saveIntermediateResults)
   bsd$varietiesCanBeParents <- makeLogical(bsd$varietiesCanBeParents)
   
   # Genetic architecture defaults
@@ -256,4 +258,97 @@ calcCurrentStatus <- function(bsd){
   varCandMean <- mean(gv(bestVarCand))
   return(c(breedPopMean=breedPopMean, breedPopSD=breedPopSD, 
            varCandMean=varCandMean))
+}
+
+#' loessForNsim function NOT FINISHED
+#'
+#' Make a nice hexbin plot with results from optimization.
+#'
+#' @param bsd List of breeding program data
+#' @return A vector extracting breeding population means and variances
+#'
+#' @details This function is only called internally by other functions used to specify the pipeline
+#'
+#' @export
+loessForNsim <- function(nSim, allBatches, nToRepeat, rand=FALSE, 
+                         xlim=NULL, ylim=NULL, budg1=1, budg2=2){
+  # Frame for hexbin plots
+  if (is.null(xlim)){
+    xlim <- c(floor(min(allBatches[,budg1])*50-0.5)/50, 
+              ceiling(max(allBatches[,budg1])*50+0.5)/50)
+  }
+  if (is.null(ylim)){
+    ylim <- c(floor(min(allBatches[,budg2])*50-0.5)/50, 
+              ceiling(max(allBatches[,budg2])*50+0.5)/50)
+  }
+
+  sims <- 1:nSim
+  if (rand) sims <- sort(sample(nrow(allBatches), nSim))
+  uptoBatches <- allBatches[sims,]
+  
+  stageNames <- colnames(allBatches)[grep("budget", colnames(allBatches))]
+  stageNames <- stageNames %>% substring(8)
+  
+  # Non-Parametric LOESS response
+  loFormula <- paste0("response ~ ", paste0(paste0("budget.", stageNames[-1]), collapse=" + "))
+  loFM <- loess(loFormula, data=uptoBatches)
+  loPred <- predict(loFM, se=T)
+  
+  # choose which have high response and high std. err. of response
+  # Use Pareto front, looking for high fit and high std. err.
+  paretoRepeat <- NULL
+  fitStdErr <- tibble(batchID=1:nrow(uptoBatches), fit=loPred$fit, se=loPred$se.fit)
+  while (length(paretoRepeat) < nToRepeat){
+    nonDomSim <- findNonDom(fitStdErr, dir1Low=F, dir2Low=F, var1name="fit", var2name="se")
+    nds <- nonDomSim$batchID
+    if (length(nds) > nToRepeat - length(paretoRepeat)){
+      nds <- sample(nds, nToRepeat - length(paretoRepeat))
+    }
+    paretoRepeat <- c(paretoRepeat, nds)
+    fitStdErr <- fitStdErr %>% dplyr::filter(!(batchID %in% nds))
+  }
+  fitStdErr <- tibble(batchID=1:nrow(uptoBatches), fit=loPred$fit, se=loPred$se.fit)
+  plot(fitStdErr$fit, fitStdErr$se)
+  points(fitStdErr$fit[paretoRepeat], fitStdErr$se[paretoRepeat], pch=16, col=2, cex=0.8)
+  # Use ones that have the best chance of beating the current best
+  bestGain <- max(fitStdErr$fit)
+  probBetter <- pnorm(bestGain, fitStdErr$fit, fitStdErr$se, lower.tail=FALSE)
+  hiProb <- order(probBetter, decreasing=T)[1:nToRepeat]
+  hist(probBetter[hiProb])
+  hist(hiProb)
+  plot(fitStdErr$fit, fitStdErr$se)
+  points(fitStdErr$fit[hiProb], fitStdErr$se[hiProb], pch=16, col=2, cex=0.8)
+  
+  bestFit <- which.max(loPred$fit)
+  bestSE <- loPred$se.fit[bestFit]
+  
+  # Plot all and circle best
+  bins <- hexbin(cbind(uptoBatches[,budg1], uptoBatches[,budg2]), xbnds=xlim, ybnds=ylim)
+  p <- plot(bins, xlab=names(budg1), ylab=names(budg2), main=nSim)
+  pushHexport(p$plot.vp)
+  grid.points(uptoBatches[bestFit, budg1], uptoBatches[bestFit, budg2], gp=gpar(col="red"))
+  upViewport()
+  
+  # Plot Pareto repeats
+  bins <- hexbin(cbind(uptoBatches[paretoRepeat, budg1], uptoBatches[paretoRepeat, budg2]), xbnds=xlim, ybnds=ylim)
+  pdf(paste0("_pdfs/RepPareto", nSim, ".pdf"))
+  p <- plot(bins, xlab=names(budg1), ylab=names(budg2), main=paste("Rep. Pareto", nSim), legend=FALSE)
+  pushHexport(p$plot.vp)
+  grid.points(uptoBatches[bestFit, budg1], uptoBatches[bestFit, budg2], gp=gpar(col="red"))
+  upViewport()
+  dev.off()
+  
+  # Plot high probability repeats
+  bins <- hexbin(cbind(uptoBatches[hiProb, budg1], uptoBatches[hiProb, budg2]), xbnds=xlim, ybnds=ylim)
+  pdf(paste0("_pdfs/RepBest", nSim, ".pdf"))
+  p <- plot(bins, xlab=names(budg1), ylab=names(budg2), main=paste("Rep. Best", nSim), legend=FALSE)
+  pushHexport(p$plot.vp)
+  grid.points(uptoBatches[bestFit, budg1], uptoBatches[bestFit, budg2], gp=gpar(col="red"))
+  upViewport()
+  dev.off()
+  
+  whichClose <- which(max(loPred$fit) - loPred$fit < bestSE)
+  print(paste("Number of Sims <1 StdErr to best", length(whichClose)))
+  nClose <- sum(max(loPred$fit) - loPred$fit < 2*bestSE)
+  return(c(bestFit=loPred$fit[bestFit], bestSE=bestSE, nClose=nClose, loPred=loPred, probBetter=probBetter))
 }
