@@ -10,13 +10,13 @@
 #' the variety development pipeline and selection functions
 #' @return Named list containing the `AlphaSimR` SP file, breedingPop the
 #' breeding population, varietyCand an empty pop for variety candidates,
-#' phenoRecords an empty tibble for phenotype records, and inventory an empty
-#' tibble for variety candidates
+#' phenoRecords an empty tibble for phenotype records
 #'
 #' @details Call this function at the beginning of the simulation
 #'
 #' @examples
-#' bsd <- initializeProgram("FounderCtrlFile.txt")
+#' bsd <- initializeProgram("FounderCtrlFile.txt", "SchemeCtrlFile.txt", 
+#'                          "CostsCtrlFile.txt", "OptimizationCtrlFile.txt")
 #'
 #' @export
 initializeProgram <- function(founderFile, schemeFile, 
@@ -30,8 +30,7 @@ initializeProgram <- function(founderFile, schemeFile,
 
   # Read parameters about the overall scheme
   parmNames <- c("nCyclesToRun", "nBurnInCycles", "nStages", "stageNames", 
-                 "nEntries", "nReps", "nLocs", "errVars",
-                 "seedNeeded", "seedProduced", "optiContEffPop",
+                 "nEntries", "nReps", "nLocs", "errVars", "optiContEffPop",
                  "nBreedingProg", "nPopImpCycPerYear", "keepNTrainingCyc", 
                  "keepNBreedingCyc", "varietiesCanBeParents")
   bsdNew <- readControlFile(schemeFile, parmNames)
@@ -210,8 +209,7 @@ calcDerivedParms <- function(bsd){
 
   # Check that these vectors are of the right length
   rightLength <- function(objName) length(get(objName, bsd)) == bsd$nStages
-  vecNames <- c("stageNames", "nEntries", "nReps", "nLocs", "errVars",
-                "seedNeeded", "seedProduced")
+  vecNames <- c("stageNames", "nEntries", "nReps", "nLocs", "errVars")
   rl <- sapply(vecNames, rightLength)
   if (any(!rl)){
     stop(paste("These vectors do not have the right length:",
@@ -232,8 +230,8 @@ calcDerivedParms <- function(bsd){
   }
 
   # Make sure everything has names
-  names(bsd$nEntries) <- names(bsd$nReps) <- names(bsd$nLocs) <- names(bsd$errVars) <-
-    names(bsd$seedNeeded) <- names(bsd$seedProduced)<- bsd$stageNames
+  names(bsd$nEntries) <- names(bsd$nReps) <- names(bsd$nLocs) <- 
+    names(bsd$errVars) <- bsd$stageNames
 
   return(bsd)
 }

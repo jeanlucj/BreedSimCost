@@ -10,7 +10,7 @@
 #'
 #' @return Updated bsd
 #'
-#' @details Add records to phenoRecords and update the inventory
+#' @details Add records to phenoRecords
 #'
 #' @examples
 #' params <- runVDPtrial(bsd, trialType, entries)
@@ -31,9 +31,6 @@ runVDPtrial <- function(bsd, trialType, entries){
                    errVar=bsd$errVars[trialType])
   bsd$phenoRecords <- bsd$phenoRecords %>% bind_rows(newRec)
 
-  # Manage the inventory
-  bsd$inventory[entries] <- bsd$inventory[entries] - bsd$seedNeeded[trialType] +
-    bsd$seedProduced[trialType]
   # Manage the trialID number
   bsd$nextTrialID <- bsd$nextTrialID + 1
 
@@ -49,8 +46,8 @@ runVDPtrial <- function(bsd, trialType, entries){
 #' @param toTrial String the trial type the entries are going to 
 #' @param fromTrial String the trial type the entries are coming from 
 #' @return Vector of entry IDs
-#' @details Accesses all data in phenoRecords to pick the highest among
-#' candidates with enough seed inventory.
+#' @details Accesses all data in phenoRecords to pick the highest 
+#' performing candidates.
 #'
 #' @examples
 #' entries <- chooseTrialEntries(bsd, toTrial, fromTrial)]
@@ -83,11 +80,8 @@ chooseTrialEntries <- function(bsd, toTrial, fromTrial=NULL){
       crit <- c(phenoRecords$pheno)
       names(crit) <- phenoRecords$id
     }
-    minToEnter <- bsd$seedNeeded[toTrial]
-    hasInventory <- bsd$inventory[bsd$inventory >= minToEnter] %>% names
-    candidates <- intersect(candidates, hasInventory)
     if (length(candidates) < nToSelect){
-      stop("There are too few variety candidates with enough inventory")
+      stop("There are too few variety candidates for trial")
     }
     crit <- crit[candidates]
     entries <- crit[(crit %>% order(decreasing=T))[1:nToSelect]] %>% names
@@ -137,14 +131,6 @@ makeVarietyCandidates <- function(bsd, breedPopIDs=NULL){
     bsd$varietyCandidates <- c(bsd$varietyCandidates, newCand)
   } else{
     bsd$varietyCandidates <- newCand
-  }
-  # Update inventory
-  addToInventory <- rep(min(bsd$seedNeeded), nCandidates)
-  names(addToInventory) <- newCand@id
-  if (exists("inventory", bsd)){
-    bsd$inventory <- c(bsd$inventory, addToInventory)
-  } else{
-    bsd$inventory <- addToInventory
   }
 
   return(bsd)
