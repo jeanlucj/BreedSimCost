@@ -352,14 +352,13 @@ plotLoessPred <- function(nSim=nrow(resultMat), resultMat,
                         ylim=NULL, budg1=1, budg2=2)
   bmc <- binMeanContrast
   
-  binMeanRange <- diff(range(lpc$binMean))^bmc
-  meanAsCount <- 999*(lpc$binMean - min(lpc$binMean))^bmc / binMeanRange %>%
-                      round + 1
+  binRange <- diff(range(lpc$binMean))^bmc
+  meanAsCount <- round(99*(lpc$binMean - min(lpc$binMean))^bmc / binRange) + 1
   nSim <- lpc$bins@n
   lpc$bins@count <- meanAsCount
   main <- paste0(nSim, ": ", paste(round(range(lpc$binMean), 1), collapse=" to "))
   
-  p <- plot(lpc$bins, main=main, legend=FALSE)
+  p <- hexbin::plot(lpc$bins, main=main, legend=FALSE)
   pushHexport(p$plot.vp)
   grid::grid.points(lpc$hiCtXY[1], lpc$hiCtXY[2], gp=gpar(col=3))
   grid::grid.points(lpc$hiGainXY[1], lpc$hiGainXY[2], gp=gpar(col="red"))
