@@ -72,9 +72,10 @@ chooseTrialEntries <- function(bsd, toTrial, fromTrial=NULL){
   } else{
     nToSelect <- bsd$nEntries[toTrial]
     phenoRecords <- bsd$phenoRecords
-    if (!is.null(fromTrial)) 
+    if (!is.null(fromTrial)){
       phenoRecords <- phenoRecords %>% filter(trialType == fromTrial &
                                                 year == bsd$year - 1)
+    }
     candidates <- phenoRecords$id %>% unique
     if (nrow(phenoRecords) > length(candidates)){ # There is some replication
       crit <- iidPhenoEval(phenoRecords)
