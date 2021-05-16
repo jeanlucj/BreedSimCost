@@ -361,7 +361,7 @@ optimizeByLOESS <- function(bsd){
         results %>% slice(idx) %>% dplyr::select(contains("perc")))
       combineBudg <- function(dummy, batch){
         twoBudg <- sample(length(batch), 2)
-        return(0.9 * batch[[twoBudg[1]]] + 0.1 * batch[[twoBudg[2]]])
+        return(0.8 * batch[[twoBudg[1]]] + 0.2 * batch[[twoBudg[2]]])
       }
       batch <- c(batch, 
                  lapply(1:(bsd$batchSize - length(batch)), combineBudg, batch))
