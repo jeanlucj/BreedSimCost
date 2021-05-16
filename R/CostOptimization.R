@@ -223,18 +223,16 @@ runBatch <- function(batchBudg, bsd){
   }
 
   if (bsd$debug){
-    batchResults <- lapply(batchBudg, runWithBudget,
-                           bsd=bsd)
+    batchResults <- lapply(batchBudg, runWithBudget, bsd=bsd)
   } else{
-    batchResults <- mclapply(batchBudg, runWithBudget,
-                             bsd=bsd, mc.cores=bsd$nCores)
+    batchResults <- mclapply(batchBudg, runWithBudget, bsd=bsd, 
+                             mc.cores=bsd$nCores)
   }
   # Remove results where budget was not valid
   batchResults <- batchResults[sapply(batchResults, 
                                       function(v) !any(is.na(v)))]
-  nParmsInResults <- length(batchResults[[1]])
-  batchResults <- batchResults %>% unlist %>% matrix(nrow=nParmsInResults) %>% 
-    t %>% as_tibble(.name_repair="universal")
+  rowNum <- length(batchResults[[1]])
+  batchResults <- batchResults %>% unlist %>% matrix(nrow=rowNum) %>% t
   invisible(capture.output(
     batchResults <- as_tibble(batchResults, .name_repair="universal")
   ))
