@@ -40,7 +40,14 @@
 
 
 <meta property="og:title" content="calcBudget function — calcBudget" />
-<meta property="og:description" content="Once the costs are specified in bsd, this function calculates the total annual budget for the breeding scheme" />
+<meta property="og:description" content="Once the costs are specified in bsd, this function calculates 
+the total annual budget for the breeding scheme
+Assumptions
+There is no QC genotyping in the population improvement cycle
+Variety candidates get QC genotyped at every stage
+Variety candidates get whole genome genotyped once at the first stage
+The number of plots in each trial is nEntries*nReps so 
+the cost of the trial is nEntries*nReps*nLocs*plotCost" />
 
 
 
@@ -109,7 +116,14 @@
     </div>
 
     <div class="ref-description">
-    <p>Once the costs are specified in bsd, this function calculates the total annual budget for the breeding scheme</p>
+    <p>Once the costs are specified in bsd, this function calculates 
+the total annual budget for the breeding scheme
+Assumptions
+There is no QC genotyping in the population improvement cycle
+Variety candidates get QC genotyped at every stage
+Variety candidates get whole genome genotyped once at the first stage
+The number of plots in each trial is nEntries*nReps so 
+the cost of the trial is nEntries*nReps*nLocs*plotCost</p>
     </div>
 
     <pre class="usage"><span class='fu'>calcBudget</span><span class='op'>(</span><span class='va'>bsd</span><span class='op'>)</span></pre>
@@ -125,13 +139,13 @@
 
     <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
 
-    <p>The bsd list with updated intermediate and total costs</p>
+    <p>Numeric vector with intermediate and total costs</p>
     <h2 class="hasAnchor" id="details"><a class="anchor" href="#details"></a>Details</h2>
 
     <p>Call this function once costs have been specified</p>
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <pre class="examples"><div class='input'><span class='va'>bsd</span> <span class='op'>&lt;-</span> <span class='fu'>calcBudget</span><span class='op'>(</span><span class='va'>bsd</span><span class='op'>)</span>
+    <pre class="examples"><div class='input'><span class='va'>bsd</span><span class='op'>$</span><span class='va'>budgetVec</span> <span class='op'>&lt;-</span> <span class='fu'>calcBudget</span><span class='op'>(</span><span class='va'>bsd</span><span class='op'>)</span>
 </div><div class='output co'>#&gt; <span class='error'>Error in calcBudget(bsd): object 'bsd' not found</span></div><div class='input'>
 </div></pre>
   </div>

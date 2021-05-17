@@ -137,14 +137,14 @@ the variety development pipeline and selection functions</p></td>
 
     <p>Named list containing the `AlphaSimR` SP file, breedingPop the
 breeding population, varietyCand an empty pop for variety candidates,
-phenoRecords an empty tibble for phenotype records, and inventory an empty
-tibble for variety candidates</p>
+phenoRecords an empty tibble for phenotype records</p>
     <h2 class="hasAnchor" id="details"><a class="anchor" href="#details"></a>Details</h2>
 
     <p>Call this function at the beginning of the simulation</p>
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <pre class="examples"><div class='input'><span class='va'>bsd</span> <span class='op'>&lt;-</span> <span class='fu'>initializeProgram</span><span class='op'>(</span><span class='st'>"FounderCtrlFile.txt"</span><span class='op'>)</span>
+    <pre class="examples"><div class='input'><span class='va'>bsd</span> <span class='op'>&lt;-</span> <span class='fu'>initializeProgram</span><span class='op'>(</span><span class='st'>"FounderCtrlFile.txt"</span>, <span class='st'>"SchemeCtrlFile.txt"</span>, 
+                         <span class='st'>"CostsCtrlFile.txt"</span>, <span class='st'>"OptimizationCtrlFile.txt"</span><span class='op'>)</span>
 </div><div class='output co'>#&gt; <span class='warning'>Warning: cannot open file 'FounderCtrlFile.txt': No such file or directory</span></div><div class='output co'>#&gt; <span class='error'>Error in file(con, "r"): cannot open the connection</span></div><div class='input'>
 </div></pre>
   </div>

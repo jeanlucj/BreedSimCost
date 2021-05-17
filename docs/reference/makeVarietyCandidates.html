@@ -112,7 +112,7 @@
     <p>makeVarietyCandidates function</p>
     </div>
 
-    <pre class="usage"><span class='fu'>makeVarietyCandidates</span><span class='op'>(</span><span class='va'>bsd</span>, breedPopIDs <span class='op'>=</span> <span class='cn'>NULL</span><span class='op'>)</span></pre>
+    <pre class="usage"><span class='fu'>makeVarietyCandidates</span><span class='op'>(</span><span class='va'>bsd</span>, breedPopIDs <span class='op'>=</span> <span class='cn'>NULL</span>, nCandidates <span class='op'>=</span> <span class='cn'>NULL</span><span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -123,8 +123,12 @@
     </tr>
     <tr>
       <th>breedPopIDs</th>
-      <td><p>String vector of IDs of breeding individuals progenitors
+      <td><p>String vector IDs of breeding pop progenitors
 of the variety candidates.  If NULL, the last nBreedingProg individuals used</p></td>
+    </tr>
+    <tr>
+      <th>nCandidates</th>
+      <td><p>Make bespoke number of candidates if neede on the fly</p></td>
     </tr>
     </table>
 
