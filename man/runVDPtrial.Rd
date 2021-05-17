@@ -21,7 +21,7 @@ Updated bsd
 Function to run a variety development pipeline stage
 }
 \details{
-Add records to phenoRecords and update the inventory
+Add records to phenoRecords
 }
 \examples{
 params <- runVDPtrial(bsd, trialType, entries)

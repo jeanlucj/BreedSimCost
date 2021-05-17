@@ -4,13 +4,15 @@
 \alias{makeVarietyCandidates}
 \title{makeVarietyCandidates function}
 \usage{
-makeVarietyCandidates(bsd, breedPopIDs = NULL)
+makeVarietyCandidates(bsd, breedPopIDs = NULL, nCandidates = NULL)
 }
 \arguments{
 \item{bsd}{List of breeding program data}
 
-\item{breedPopIDs}{String vector of IDs of breeding individuals progenitors
+\item{breedPopIDs}{String vector IDs of breeding pop progenitors
 of the variety candidates.  If NULL, the last nBreedingProg individuals used}
+
+\item{nCandidates}{Make bespoke number of candidates if neede on the fly}
 }
 \value{
 Updated bsd with new variety candidates in bsd$varietyCandidates

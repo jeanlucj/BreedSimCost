@@ -1,25 +1,24 @@
 #' calcBudget function
 #'
-#' Once the costs are specified in bsd, this function calculates the total annual budget for the breeding scheme
+#' Once the costs are specified in bsd, this function calculates 
+#' the total annual budget for the breeding scheme
+#' Assumptions
+#' There is no QC genotyping in the population improvement cycle
+#' Variety candidates get QC genotyped at every stage
+#' Variety candidates get whole genome genotyped once at the first stage
+#' The number of plots in each trial is nEntries*nReps so 
+#' the cost of the trial is nEntries*nReps*nLocs*plotCost
 #'
 #' @param bsd List of breeding scheme data
-#' @return The bsd list with updated intermediate and total costs
+#' @return Numeric vector with intermediate and total costs
 #'
 #' @details Call this function once costs have been specified
 #'
 #' @examples
-#' bsd <- calcBudget(bsd)
+#' bsd$budgetVec <- calcBudget(bsd)
 #'
 #' @export
 calcBudget <- function(bsd){
-  # Calculate the program yearly cost
-  # Assumptions
-  # There is no QC genotyping in the population improvement cycle
-  # Variety candidates get QC genotyped at every stage
-  # Variety candidates get whole genome genotyped once at the first stage
-  # The number of plots in each trial is nEntries*nReps so 
-  # the cost of the trial is nEntries*nReps*nLocs*plotCost
-
   crossCosts <- bsd$nBreedingProg * bsd$nPopImpCycPerYear * bsd$crossingCost
   genoCostsPIC <- bsd$nBreedingProg * bsd$nPopImpCycPerYear *
     bsd$wholeGenomeCost
@@ -32,15 +31,15 @@ calcBudget <- function(bsd){
   budget <- crossCosts + develCosts + genoCostsVDP +
     genoCostsPIC + trialCosts + locationCosts
   
-  bsd$budgetVec <- c(crossCosts, genoCostsPIC, 
+  budgetVec <- c(crossCosts, genoCostsPIC, 
                      genoCostsVDP, develCosts,
                      trialCosts, locationCosts,
                      budget)
-  names(bsd$budgetVec) <- c("crossCosts", "genoCostsPIC", 
+  names(budgetVec) <- c("crossCosts", "genoCostsPIC", 
                             "genoCostsVDP", "develCosts",
                             "trialCosts", "locationCosts",
                             "budget")
-  return(bsd)
+  return(budgetVec)
 }
 
 #' budgetToScheme function
@@ -68,7 +67,7 @@ calcBudget <- function(bsd){
 #'
 #' @export
 budgetToScheme <- function(percentages, bsd){
-  targetBudget <- bsd$budgetVec["budget"] - bsd$budgetVec["locationCosts"]
+  targetBudget <- bsd$initBudget["budget"] - bsd$initBudget["locationCosts"]
   
   # Population Improvement Cycle budget
   picBudget <- targetBudget * percentages[1]
@@ -85,9 +84,8 @@ budgetToScheme <- function(percentages, bsd){
   names(nEntries) <- bsd$stageNames
   failure <- any(diff(nEntries) > 0) # Ensure that nEntries gets smaller
   
-  bsd$realizedBudget <- NA
   if (!failure){
-    bsd <- calcBudget(bsd)
+    bsd$realizedBudget <- calcBudget(bsd)
     bsd$nBreedingProg <- nBreedingProg
     bsd$nEntries <- nEntries
   }
@@ -95,7 +93,7 @@ budgetToScheme <- function(percentages, bsd){
   return(bsd)
 }
 
-#' gridSearch function
+#' makeGrid function
 #'
 #' Minimum and maximum budget percentages for each part and step sizes
 #' These vectors are in bsd
@@ -108,11 +106,10 @@ budgetToScheme <- function(percentages, bsd){
 #' @details Call this function to set up optimization
 #'
 #' @examples
-#' bsd <- gridSearch(bsd)
+#' bsd <- makeGrid(bsd)
 #'
 #' @export
 makeGrid <- function(bsd){
-  
   percList <- as.list(seq(from=bsd$minPercentage[1], to=bsd$maxPercentage[1], 
                  by=bsd$percentageStep[1]), ncol=1)
   for (stage in 1+1:bsd$nStages){
@@ -131,6 +128,8 @@ makeGrid <- function(bsd){
 #'
 #' Run one replication of the scheme with specified budget percentages
 #' These percentages have to be valid in terms of following rules
+#' NOTE: the statements between startValues <- ... and endValues <- 
+#' define the breeding scheme that is being optimized
 #' 
 #' @param percentages Double vector 1 + nStages with budget percentages for 
 #' the population improvement cycle and the variety development pipeline
@@ -160,7 +159,7 @@ runWithBudget <- function(percentages, bsd, returnBSD=F){
   bsd <- budgetToScheme(percentages, bsd)
   if (bsd$verbose) cat(percentages, bsd$failure, "\n")
   if (bsd$failure){
-    print(Sys.time() - s)
+    if (bsd$verbose) print(Sys.time() - s)
     return(c(percentages, NA))
   }
   
@@ -185,13 +184,13 @@ runWithBudget <- function(percentages, bsd, returnBSD=F){
   }
   
   endValues <- calcCurrentStatus(bsd)
-  if (bsd$verbose) print(Sys.time() - s)
   
+  if (bsd$verbose) print(Sys.time() - s)
   if (bsd$debug) on.exit()
   if (returnBSD){
     return(bsd)
   } else{
-    return(c(percentages, startValues, endValues))
+    return(c(percentages, startValues, endValues, bsd$realizedBudget$budget))
   }
 }#END runWithBudget
 
@@ -239,7 +238,8 @@ runBatch <- function(batchBudg, bsd){
   # WARNING names here are hardcoded based on calcCurrentStatus
   colnames(batchResults) <- c(paste0("perc", c("PIC", bsd$stageNames)),
                               paste0("init", c("PopMean", "PopSD", "VarMean")),
-                              paste0("end", c("PopMean", "PopSD", "VarMean")))
+                              paste0("end", c("PopMean", "PopSD", "VarMean")), 
+                              "Budget")
   batchResults <- batchResults %>% mutate(response = endVarMean - initPopMean)
   
   if (bsd$debug) on.exit()

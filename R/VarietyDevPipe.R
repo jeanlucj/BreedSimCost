@@ -73,18 +73,33 @@ chooseTrialEntries <- function(bsd, toTrial, fromTrial=NULL){
       phenoRecords <- phenoRecords %>% filter(trialType == fromTrial &
                                                 year == bsd$year - 1)
     }
-    candidates <- phenoRecords$id %>% unique
+    candidates <- phenoRecords %>% pull(id) %>% unique
     if (nrow(phenoRecords) > length(candidates)){ # There is some replication
       crit <- iidPhenoEval(phenoRecords)
     } else{
-      crit <- c(phenoRecords$pheno)
-      names(crit) <- phenoRecords$id
+      crit <- phenoRecords %>% pull(pheno)
+      names(crit) <- phenoRecords %>% pull(id)
     }
     if (length(candidates) < nToSelect){
-      stop("There are too few variety candidates for trial")
+      # Workaround for a problem that should only happen in the transition from
+      # burnin to two-part: the VDP nEntries between the two are mismatched
+      print("There are too few variety candidates for trial")
+      nCand <- nToSelect - length(candidates)
+      stageNum <- which(bsd$stageNames == toTrial) # How many years back parents
+      nBreedInd <- AlphaSimR::nInd(bsd$breedingPop)
+      nIndBack <- bsd$initNBreedingProg * 
+        (bsd$nPopImpCycPerYear * (stageNum - 1) + 1)
+      nIndBack <- min(nIndBack, nBreedInd)
+      breedPopIDs <- bsd$breedingPop@id[nBreedInd - nIndBack + 
+                                          1:bsd$nBreedingProg]
+      bsd <<- makeVarietyCandidates(bsd, breedPopIDs, nCand) # WARNING
+      nVarInd <- AlphaSimR::nInd(bsd$varietyCandidates)
+      entries <- c(candidates, 
+                      bsd$varietyCandidates@id[nVarInd - (nCand - 1):0])
+    } else{
+      crit <- crit[candidates]
+      entries <- crit[(crit %>% order(decreasing=T))[1:nToSelect]] %>% names
     }
-    crit <- crit[candidates]
-    entries <- crit[(crit %>% order(decreasing=T))[1:nToSelect]] %>% names
   }
   if (bsd$debug) on.exit()
   return(entries)
@@ -93,8 +108,9 @@ chooseTrialEntries <- function(bsd, toTrial, fromTrial=NULL){
 #' makeVarietyCandidates function
 #'
 #' @param bsd List of breeding program data
-#' @param breedPopIDs String vector of IDs of breeding individuals progenitors
+#' @param breedPopIDs String vector IDs of breeding pop progenitors
 #' of the variety candidates.  If NULL, the last nBreedingProg individuals used
+#' @param nCandidates Make bespoke number of candidates if neede on the fly
 #'
 #' @return Updated bsd with new variety candidates in bsd$varietyCandidates
 #' @details Here, creates DHs evenly distributed among the breeding progeny
@@ -103,14 +119,14 @@ chooseTrialEntries <- function(bsd, toTrial, fromTrial=NULL){
 #' bsd <- makeVarietyCandidates(bsd)]
 #'
 #' @export
-makeVarietyCandidates <- function(bsd, breedPopIDs=NULL){
+makeVarietyCandidates <- function(bsd, breedPopIDs=NULL, nCandidates=NULL){
   if (is.null(breedPopIDs)){ # Takes the last bsd$nBreedingProg
     nInd <- nInd(bsd$breedingPop)
     nIndMax <- min(nInd, bsd$nBreedingProg)
     breedPopIDs <- bsd$breedingPop@id[nInd - (nIndMax - 1):0]
   }
   nInd <- length(breedPopIDs)
-  nCandidates <- max(bsd$nEntries)
+  if (is.null(nCandidates)) nCandidates <- bsd$nEntries[1]
   nDH <- nCandidates %/% nInd
   if (nDH > 0){
     newCand <- makeDH(bsd$breedingPop[breedPopIDs], nDH=nDH, simParam=bsd$SP)

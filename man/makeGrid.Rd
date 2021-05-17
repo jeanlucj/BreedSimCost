@@ -2,7 +2,7 @@
 % Please edit documentation in R/CostOptimization.R
 \name{makeGrid}
 \alias{makeGrid}
-\title{gridSearch function}
+\title{makeGrid function}
 \usage{
 makeGrid(bsd)
 }
@@ -21,6 +21,6 @@ Returns a list with all the outputs
 Call this function to set up optimization
 }
 \examples{
-bsd <- gridSearch(bsd)
+bsd <- makeGrid(bsd)
 
 }

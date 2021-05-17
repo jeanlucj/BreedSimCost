@@ -35,6 +35,9 @@ initializeProgram <- function(founderFile, schemeFile,
                  "keepNBreedingCyc", "varietiesCanBeParents")
   bsdNew <- readControlFile(schemeFile, parmNames)
   bsd <- c(bsd, bsdNew)
+  # Because different budget allocations will change these, store initial values
+  bsd$initNEntries <- bsd$nEntries
+  bsd$initNBreedingProg <- bsd$nBreedingProg
   
   # Read parameters about scheme costs
   parmNames <- c("plotCosts", "perLocationCost", "crossingCost", 
@@ -55,7 +58,7 @@ initializeProgram <- function(founderFile, schemeFile,
   bsd$year <- 0
   bsd$nextTrialID <- 1
   bsd <- calcDerivedParms(bsd)
-  bsd <- calcBudget(bsd)
+  bsd$initBudget <- calcBudget(bsd)
   
   # Create haplotypes for founder population of outbred individuals
   if (bsd$quickHaplo){

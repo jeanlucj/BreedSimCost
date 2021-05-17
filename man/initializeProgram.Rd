@@ -16,8 +16,7 @@ the variety development pipeline and selection functions}
 \value{
 Named list containing the `AlphaSimR` SP file, breedingPop the
 breeding population, varietyCand an empty pop for variety candidates,
-phenoRecords an empty tibble for phenotype records, and inventory an empty
-tibble for variety candidates
+phenoRecords an empty tibble for phenotype records
 }
 \description{
 Function to initialize the simulation.
@@ -28,6 +27,7 @@ Create simulation data structures.
 Call this function at the beginning of the simulation
 }
 \examples{
-bsd <- initializeProgram("FounderCtrlFile.txt")
+bsd <- initializeProgram("FounderCtrlFile.txt", "SchemeCtrlFile.txt", 
+                         "CostsCtrlFile.txt", "OptimizationCtrlFile.txt")
 
 }

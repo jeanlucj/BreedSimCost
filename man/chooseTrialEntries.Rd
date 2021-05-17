@@ -21,8 +21,8 @@ Function to select which varieties to advance to the next stage assuming
 they are IID (i.e., estimating genotypic values), by truncation selection
 }
 \details{
-Accesses all data in phenoRecords to pick the highest among
-candidates with enough seed inventory.
+Accesses all data in phenoRecords to pick the highest 
+performing candidates.
 }
 \examples{
 entries <- chooseTrialEntries(bsd, toTrial, fromTrial)]

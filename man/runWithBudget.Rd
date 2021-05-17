@@ -21,6 +21,8 @@ Vector with initial and end means and variances
 \description{
 Run one replication of the scheme with specified budget percentages
 These percentages have to be valid in terms of following rules
+NOTE: the statements between startValues <- ... and endValues <- 
+define the breeding scheme that is being optimized
 }
 \details{
 Call this function to test out the response of different budgets

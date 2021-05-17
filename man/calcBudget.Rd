@@ -10,15 +10,22 @@ calcBudget(bsd)
 \item{bsd}{List of breeding scheme data}
 }
 \value{
-The bsd list with updated intermediate and total costs
+Numeric vector with intermediate and total costs
 }
 \description{
-Once the costs are specified in bsd, this function calculates the total annual budget for the breeding scheme
+Once the costs are specified in bsd, this function calculates 
+the total annual budget for the breeding scheme
+Assumptions
+There is no QC genotyping in the population improvement cycle
+Variety candidates get QC genotyped at every stage
+Variety candidates get whole genome genotyped once at the first stage
+The number of plots in each trial is nEntries*nReps so 
+the cost of the trial is nEntries*nReps*nLocs*plotCost
 }
 \details{
 Call this function once costs have been specified
 }
 \examples{
-bsd <- calcBudget(bsd)
+bsd$budgetVec <- calcBudget(bsd)
 
 }
