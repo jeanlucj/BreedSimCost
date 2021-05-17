@@ -190,7 +190,7 @@ runWithBudget <- function(percentages, bsd, returnBSD=F){
   if (returnBSD){
     return(bsd)
   } else{
-    return(c(percentages, startValues, endValues, bsd$realizedBudget$budget))
+    return(c(percentages, startValues, endValues, bsd$realizedBudget["budget"]))
   }
 }#END runWithBudget
 
