@@ -266,8 +266,8 @@ calcCurrentStatus <- function(bsd){
 #' Summarize data from simulations in a form to make a nice hexbin plot
 #' Return both counts in bins and bin means
 #'
-#' @param nSim Integer Predictions and counts for the first nSim simulations
 #' @param resultMat Tibble the simulation results
+#' @param nSim Integer Predictions and counts for the first nSim simulations
 #' @param xlim Real max and min for plot
 #' @param ylim Real max and min for plot
 #' @param budg1 Integer which column of percent budget to make plot for x-axis
@@ -277,7 +277,7 @@ calcCurrentStatus <- function(bsd){
 #' @details Use the hexbin function to tabulate 2D bins in hexagonal array
 #'
 #' @export
-loessPredCount <- function(nSim=nrow(resultMat), resultMat, 
+loessPredCount <- function(resultMat, nSim=nrow(resultMat), 
                       xlim=NULL, ylim=NULL, 
                       budg1=1, budg2=2){
   require(hexbin)
@@ -323,33 +323,39 @@ loessPredCount <- function(nSim=nrow(resultMat), resultMat,
   hiCtXY <- c(bins@xcm[highCt], bins@ycm[highCt])
   bestFit <- which.max(binMean)
   hiGainXY <- c(bins@xcm[bestFit], bins@ycm[bestFit])
+  
+  percMean <- resultMat %>% filter(closeBin == bestFit) %>% 
+    dplyr::select(contains("perc")) %>% summarize_all(mean)
 
   return(list(loPred=loPred, bins=bins, closeBin=closeBin, 
-              binMean=binMean, hiCtXY=hiCtXY, hiGainXY=hiGainXY))
+              binMean=binMean, hiCtXY=hiCtXY, hiGainXY=hiGainXY,
+              percMean=percMean))
 }#END loessPredCount
 
 #' plotLoessPred function
 #'
 #' Make a nice hexbin plot with the summary from loessPredCount
 #'
-#' @param nSim Integer Predictions and counts for the first nSim simulations
 #' @param resultMat Tibble the simulation results
+#' @param nSim Integer Predictions and counts for the first nSim simulations
 #' @param xlim Real max and min for plot
 #' @param ylim Real max and min for plot
 #' @param budg1 Integer which column of percent budget to make plot for x-axis
 #' @param budg2 Integer which column of percent budget to make plot for y-axis
 #' @param binMeanContrast Numeric a higher value makes the peak stand out more
+#' @param plotHiCt Logical whether to put a green circle 
+#' where the most simulations were run
 #' @return A list with bin counts and means and results from LOESS predictions
 #'
 #' @details Makes a plot
 #'
 #' @export
-plotLoessPred <- function(nSim=nrow(resultMat), resultMat, 
+plotLoessPred <- function(resultMat, nSim=nrow(resultMat), 
                      xlim=NULL, ylim=NULL, 
-                     budg1=1, budg2=2, binMeanContrast=3){
+                     budg1=1, budg2=2, binMeanContrast=3, plotHiCt=F){
   require(hexbin)
   require(grid)
-  lpc <- loessPredCount(nSim, resultMat, xlim=NULL, 
+  lpc <- loessPredCount(resultMat, nSim, xlim=NULL, 
                         ylim=NULL, budg1=1, budg2=2)
   bmc <- binMeanContrast
   
@@ -357,11 +363,11 @@ plotLoessPred <- function(nSim=nrow(resultMat), resultMat,
   meanAsCount <- round(99*(lpc$binMean - min(lpc$binMean))^bmc / binRange) + 1
   nSim <- lpc$bins@n
   lpc$bins@count <- meanAsCount
-  main <- paste0(nSim, ": ", paste(round(range(lpc$binMean), 1), collapse=" to "))
+  main <- paste0(nSim, " Sims. Range: ", paste(round(range(lpc$binMean), 1), collapse=" to "))
   
   p <- hexbin::plot(lpc$bins, main=main, legend=FALSE)
   pushHexport(p$plot.vp)
-  grid::grid.points(lpc$hiCtXY[1], lpc$hiCtXY[2], gp=gpar(col=3))
+  if (plotHiCt) grid::grid.points(lpc$hiCtXY[1], lpc$hiCtXY[2], gp=gpar(col=3))
   grid::grid.points(lpc$hiGainXY[1], lpc$hiGainXY[2], gp=gpar(col="red"))
   upViewport()
   return(lpc)

@@ -85,9 +85,9 @@ budgetToScheme <- function(percentages, bsd){
   failure <- any(diff(nEntries) > 0) # Ensure that nEntries gets smaller
   
   if (!failure){
-    bsd$realizedBudget <- calcBudget(bsd)
     bsd$nBreedingProg <- nBreedingProg
     bsd$nEntries <- nEntries
+    bsd$realizedBudget <- calcBudget(bsd)
   }
   bsd$failure <- failure
   return(bsd)

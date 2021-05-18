@@ -5,8 +5,8 @@
 \title{loessPredCount function}
 \usage{
 loessPredCount(
-  nSim = nrow(resultMat),
   resultMat,
+  nSim = nrow(resultMat),
   xlim = NULL,
   ylim = NULL,
   budg1 = 1,
@@ -14,9 +14,9 @@ loessPredCount(
 )
 }
 \arguments{
-\item{nSim}{Integer Predictions and counts for the first nSim simulations}
-
 \item{resultMat}{Tibble the simulation results}
+
+\item{nSim}{Integer Predictions and counts for the first nSim simulations}
 
 \item{xlim}{Real max and min for plot}
 
