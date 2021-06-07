@@ -47,7 +47,7 @@ initializeProgram <- function(founderFile, schemeFile,
   
   # Read parameters about optimization procedure
   parmNames <- c("nCores", "minPercentage", "maxPercentage",
-                 "percentageStep", "minNBreedingProg",
+                 "percentageStep", "minNBreedingProg", "nToMarketingDept",
                  "tolerance", "batchSize", "maxNumBatches",
                  "nHighGain", "nUncertain", "debug", 
                  "verbose", "saveIntermediateResults")
@@ -250,12 +250,23 @@ calcDerivedParms <- function(bsd){
 #'
 #' @export
 calcCurrentStatus <- function(bsd){
+  # Mean of the last breeding population
   nInd <- nInd(bsd$breedingPop)
   currBreedPop <- bsd$breedingPop[nInd - (bsd$nBreedingProg - 1):0]
   breedPopMean <- mean(gv(currBreedPop))
   breedPopSD <- sd(gv(currBreedPop))
-  nInd <- nInd(bsd$varietyCandidates)
-  bestVarCand <- bsd$varietyCandidates[nInd - (bsd$nEntries[bsd$nStages] - 1):0]
+  
+  # Mean of the variety candidates being sent to the marketing department
+  lastStgRec <- bsd$phenoRecords %>%
+    filter(trialType == bsd$stageNames[bsd$nStages]) %>%
+    filter(year == max(year))
+  
+  crit <- if_else(any(is.na(lastStgRec$selCrit)), 
+                  pull(lastStgRec, pheno),
+                  pull(lastStgRec, selCrit))
+  bestVarCand <- pull(lastStgRec, id)[
+    order(crit, decreasing=T)[1:bsd$nToMarketingDept]
+    ]
   varCandMean <- mean(gv(bestVarCand))
   return(c(breedPopMean=breedPopMean, breedPopSD=breedPopSD, 
            varCandMean=varCandMean))

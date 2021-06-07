@@ -31,6 +31,12 @@ percentageStep
 minNBreedingProg
 2
 
+# Number of variety candidates in the last stage
+# that will go to the marketing department. Also the
+# minimum number of entries in the last stage
+nToMarketingDept
+4
+
 # How small should the confidence interval
 # on budgets be before you stop
 tolerance

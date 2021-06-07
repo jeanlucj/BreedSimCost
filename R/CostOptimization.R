@@ -19,6 +19,7 @@
 #'
 #' @export
 calcBudget <- function(bsd){
+  # Per task way of calculating budget
   crossCosts <- bsd$nBreedingProg * bsd$nPopImpCycPerYear * bsd$crossingCost
   genoCostsPIC <- bsd$nBreedingProg * bsd$nPopImpCycPerYear *
     bsd$wholeGenomeCost
@@ -27,18 +28,46 @@ calcBudget <- function(bsd){
     bsd$nEntries[1] * bsd$wholeGenomeCost
   trialCosts <- (bsd$nEntries * bsd$nReps * bsd$nLocs) %*% bsd$plotCost
   locationCosts <- max(bsd$nLocs) * bsd$perLocationCost
+
+  # Per stage way of calculating budget
+  # Population Improvement Cycle budget
+  picBudget <- bsd$nBreedingProg * bsd$nPopImpCycPerYear *
+    (bsd$crossingCost + bsd$wholeGenomeCost)
+  
+  # Variety Development Pipeline budget
+  stageBudgets <- bsd$nEntries * (bsd$plotCosts * bsd$nReps * bsd$nLocs +
+                                    bsd$qcGenoCost)
+  stageBudgets[1] <- stageBudgets[1] + bsd$nEntries[1] * 
+    (bsd$candidateDevelCost + bsd$wholeGenomeCost)
   
   budget <- crossCosts + develCosts + genoCostsVDP +
     genoCostsPIC + trialCosts + locationCosts
   
+  # Sanity check
+  if (budget != sum(picBudget, stageBudgets, locationCosts)){
+    stop("There was a problem calculating the budget")
+  }
+  
+  minPICbudget <- bsd$minNBreedingProg * bsd$nPopImpCycPerYear *
+    sum(bsd$crossingCost + bsd$wholeGenomeCost) / sum(picBudget, stageBudgets)
+  minLastStgBudget <- bsd$nToMarketingDept * 
+    ((bsd$plotCosts * bsd$nReps * bsd$nLocs)[bsd$nStages] + bsd$qcGenoCost) / 
+    sum(picBudget, stageBudgets)
+  
   budgetVec <- c(crossCosts, genoCostsPIC, 
-                     genoCostsVDP, develCosts,
-                     trialCosts, locationCosts,
-                     budget)
+                 genoCostsVDP, develCosts,
+                 trialCosts, locationCosts,
+                 picBudget, stageBudgets,
+                 c(picBudget, stageBudgets) / sum(picBudget, stageBudgets),
+                 minPICbudget, minLastStgBudget,
+                 budget)
   names(budgetVec) <- c("crossCosts", "genoCostsPIC", 
-                            "genoCostsVDP", "develCosts",
-                            "trialCosts", "locationCosts",
-                            "budget")
+                        "genoCostsVDP", "develCosts",
+                        "trialCosts", "locationCosts",
+                        "picBudget", paste0(bsd$stageNames, "_budget"),
+                        paste0("perc_", c("PIC", bsd$stageNames)),
+                        "minPICbudget", "minLastStgBudget",
+                        "budget")
   return(budgetVec)
 }
 
@@ -69,20 +98,57 @@ calcBudget <- function(bsd){
 budgetToScheme <- function(percentages, bsd){
   targetBudget <- bsd$initBudget["budget"] - bsd$initBudget["locationCosts"]
   
-  # Population Improvement Cycle budget
-  picBudget <- targetBudget * percentages[1]
-  nBreedingProg <- round(picBudget / bsd$nPopImpCycPerYear /
-                           (bsd$crossingCost + bsd$wholeGenomeCost))
-  failure <- nBreedingProg < bsd$minNBreedingProg
+  numbersFromPercentages <- function(percentages){
+    # Population Improvement Cycle budget
+    picBudget <- targetBudget * percentages[1]
+    nBreedingProg <- round(picBudget / bsd$nPopImpCycPerYear /
+                             (bsd$crossingCost + bsd$wholeGenomeCost))
+    
+    # Variety Development Pipeline budget
+    costPerEntry <- bsd$plotCosts * bsd$nReps * bsd$nLocs + bsd$qcGenoCost
+    costPerEntry[1] <- costPerEntry[1] + 
+      bsd$candidateDevelCost + bsd$wholeGenomeCost
+    stageBudgets <- targetBudget * percentages[-1]
+    nEntries <- round(stageBudgets / costPerEntry)
+    names(nEntries) <- bsd$stageNames
+    return(list(nBreedingProg, nEntries))
+  }
+  nBreedingProg <- numbersFromPercentages(percentages)
+  nEntries <- nBreedingProg[[2]]
+  nBreedingProg <- nBreedingProg[[1]]
   
-  # Variety Development Pipeline budget
-  costPerEntry <- bsd$plotCosts * bsd$nReps * bsd$nLocs + bsd$qcGenoCost
-  costPerEntry[1] <- costPerEntry[1] + 
-    bsd$candidateDevelCost + bsd$wholeGenomeCost
-  stageBudgets <- targetBudget * percentages[-1]
-  nEntries <- round(stageBudgets / costPerEntry)
-  names(nEntries) <- bsd$stageNames
-  failure <- any(diff(nEntries) > 0) # Ensure that nEntries gets smaller
+  # Ensure that the population improvement cycle generates enough progeny
+  failure1 <- nBreedingProg < bsd$minNBreedingProg
+  # Ensure that enough variety candidates are in the final stage
+  failure2 <- last(nEntries) < bsd$nToMarketingDept
+  if (failure1 | failure2){
+    # Decide what percentages to go toward
+    if (nrow(bsd$results) > 0){
+      percBest <- bsd$results %>% slice(which.max(fit)) %>% 
+        select(starts_with("perc")) %>% unlist
+    } else{
+      percBest <- bsd$budget[grep("perc", names(bsd$budget))]
+    }
+    # minPICbudget, minLastStgBudget
+    lambda1 <- lambda2 <- 0
+    if (failure1){
+      a <- percentages[1]
+      lambda1 <- (bsd$initBudget["minPICbudget"] - a) / (perc[1] - a)
+    }
+    if (failure2){
+      b <- dplyr::last(percentages)
+      lambda2 <- (bsd$initBudget["minLastStgBudget"] - b) / 
+        (dplyr::last(perc) - b)
+    }
+    lambda <- if_else(lambda1 > lambda2, lambda1, lambda2)
+    percentages <- (1 - lambda) * percentages + lambda * percBest
+  }
+  nBreedingProg <- numbersFromPercentages(percentages)
+  nEntries <- nBreedingProg[[2]]
+  nBreedingProg <- nBreedingProg[[1]]
+  
+  # Ensure that nEntries gets smaller over stages
+  failure <- any(diff(nEntries) > 0)
   
   if (!failure){
     bsd$nBreedingProg <- nBreedingProg
@@ -171,9 +237,9 @@ runWithBudget <- function(percentages, bsd, returnBSD=F){
     
     # Within the year, sequentially run the VDP...
     for (stage in 1:bsd$nStages){
-      entries <- chooseTrialEntries(bsd, toTrial=bsd$stageNames[stage],
+      bsd <- chooseTrialEntries(bsd, toTrial=bsd$stageNames[stage],
                    fromTrial=ifelse(stage == 1, NULL, bsd$stageNames[stage-1]))
-      bsd <- runVDPtrial(bsd, bsd$stageNames[stage], entries)
+      bsd <- runVDPtrial(bsd, bsd$stageNames[stage])
     }
 
     # ... And then run the PIC. Sequencing could be made more complicated
@@ -217,7 +283,7 @@ runBatch <- function(batchBudg, bsd){
     require(here)
     on.exit(expr={
       print(traceback())
-      saveRDS(mget(ls()), file=here::here("data/runBatch.rds"))
+      saveRDS(mget(ls()), file=here::here("data", "runBatch.rds"))
     })
   }
 
@@ -236,7 +302,7 @@ runBatch <- function(batchBudg, bsd){
     batchResults <- as_tibble(batchResults, .name_repair="universal")
   ))
   # WARNING names here are hardcoded based on calcCurrentStatus
-  colnames(batchResults) <- c(paste0("perc", c("PIC", bsd$stageNames)),
+  colnames(batchResults) <- c(paste0("perc_", c("PIC", bsd$stageNames)),
                               paste0("init", c("PopMean", "PopSD", "VarMean")),
                               paste0("end", c("PopMean", "PopSD", "VarMean")), 
                               "Budget")
@@ -252,7 +318,6 @@ runBatch <- function(batchBudg, bsd){
 #' gain and the budgets with high gain but also high uncertainty
 #' 
 #' @param bsd List of breeding scheme data
-#' @param results List with the results of simulations so far
 #'  
 #' @return List of two vectors one with high gain budgets
 #' and one with uncertainty budgets
@@ -260,17 +325,17 @@ runBatch <- function(batchBudg, bsd){
 #' @details Call this function to choose which budgets to try again
 #'
 #' @examples
-#' bsd <- findRedoBudgets(bsd, results)
+#' bsd <- findRedoBudgets(bsd)
 #'
 #' @export
-findRedoBudgets <- function(bsd, results){
+findRedoBudgets <- function(bsd){
   if (bsd$debug){  require(here)
     on.exit(expr={
       print(traceback())
       saveRDS(mget(ls()), file=here::here("data/findRedoBudgets.rds"))
     })
   }
-  
+  results <- bsd$results
   # Non-Parametric LOESS response
   loFormula <- paste0("response ~ ", 
                       paste0(colnames(results)[1:bsd$nStages], collapse=" + "))
@@ -329,34 +394,32 @@ optimizeByLOESS <- function(bsd){
   nBatchesDone <- 0
   toleranceMet <- FALSE
   allPercRanges <- list()
-  results <- tibble()
+  bsd$results <- tibble()
   # 1. Make grid batch
   batch <- makeGrid(bsd)
   while (nBatchesDone < bsd$maxNumBatches & !toleranceMet){
     # 2. Run batch
     newBatchOut <- runBatch(batch, bsd)
     # 3. Evaluate stopping rule
-    results <- results %>% bind_rows(newBatchOut)
+    bsd$results <- bsd$results %>% bind_rows(newBatchOut)
     # Non-Parametric LOESS response
     loFormula <- paste0("response ~ ", 
-                   paste0(colnames(results)[1:bsd$nStages], collapse=" + "))
-    loFM <- loess(loFormula, data=results, degree=1)
+                   paste0(colnames(bsd$results)[1:bsd$nStages], collapse=" + "))
+    loFM <- loess(loFormula, data=bsd$results, degree=1)
     loPred <- predict(loFM, se=T)
-    loPred <- tibble(simNum=1:nrow(results), fit=loPred$fit, 
-                     se=loPred$se.fit, results)
+    bsd$results <- bsd$results %>% mutate(fit=loPred$fit, se=loPred$se.fit)
     # 4. Evaluate stopping rule
-    bestGain <- which.max(loPred$fit)
-    bestSE <- loPred$se[bestGain]
-    bestClose <- which(loPred$fit[bestGain] - loPred$fit < 2*bestSE)
-    percRanges <- results %>% slice(bestClose) %>% 
+    bestGain <- which.max(bsd$results$fit)
+    bestSE <- bsd$results$se[bestGain]
+    bestClose <- which(bsd$results$fit[bestGain] - bsd$results$fit < 2*bestSE)
+    percRanges <- bsd$results %>% slice(bestClose) %>% 
       dplyr::select(contains("perc")) %>% summarise_all(range)
-    toleranceMet <- all(percRanges %>% 
-                                 summarise_all(diff) < bsd$tolerance)
+    toleranceMet <- all(percRanges %>% summarise_all(diff) < bsd$tolerance)
     if (!toleranceMet){
       # 5. Find which budgets to rerun
-      redoSims <- findRedoBudgets(bsd, results) %>% unlist
+      redoSims <- findRedoBudgets(bsd) %>% unlist
       batch <- lapply(redoSims, function(idx) 
-        results %>% slice(idx) %>% dplyr::select(contains("perc")))
+        bsd$results %>% slice(idx) %>% dplyr::select(contains("perc")))
       combineBudg <- function(dummy, batch){
         twoBudg <- sample(length(batch), 2)
         return(0.8 * batch[[twoBudg[1]]] + 0.2 * batch[[twoBudg[2]]])
@@ -365,7 +428,7 @@ optimizeByLOESS <- function(bsd){
                  lapply(1:(bsd$batchSize - length(batch)), combineBudg, batch))
     }
     allPercRanges <- c(allPercRanges, list(list(percRanges, 
-      nSimClose=length(bestClose), bestGain=loPred$fit[bestGain],
+      nSimClose=length(bestClose), bestGain=bsd$results$fit[bestGain],
       bestSE=bestSE)))
     
     nBatchesDone <- nBatchesDone + 1
@@ -373,12 +436,12 @@ optimizeByLOESS <- function(bsd){
     if (bsd$saveIntermediateResults){
       # Save batches and results
       require(here)
-      saveRDS(results, file=here::here("data/allBatches.rds"))
-      saveRDS(allPercRanges, file=here::here("data/allPercentRanges.rds"))
+      saveRDS(bsd$results, file=here::here("data", "allBatches.rds"))
+      saveRDS(allPercRanges, file=here::here("data", "allPercentRanges.rds"))
     }
     
   }#END go through batches
 
   if (bsd$debug) on.exit()
-  return(list(results=results, allPercentRanges=allPercRanges))
+  return(list(results=bsd$results, allPercentRanges=allPercRanges))
 }

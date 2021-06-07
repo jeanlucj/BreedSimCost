@@ -30,14 +30,6 @@ nLocs
 errVars
 400 120 70
 
-# Vector of minimum inventory to enter the stage
-seedNeeded
-1 10 60
-
-# Vector of inventory output from the stage
-seedProduced
-10 80 360
-
 # Population Improvement Cycle
 # Effective population size for optimal contributions
 optiContEffPop

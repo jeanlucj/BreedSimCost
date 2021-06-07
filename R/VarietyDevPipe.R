@@ -13,10 +13,11 @@
 #' @details Add records to phenoRecords
 #'
 #' @examples
-#' params <- runVDPtrial(bsd, trialType, entries)
+#' params <- runVDPtrial(bsd, trialType)
 #'
 #' @export
-runVDPtrial <- function(bsd, trialType, entries){
+runVDPtrial <- function(bsd, trialType){
+  entries <- bsd$entries
   # Calculate the error variance resulting from the number of locations and reps
   # Note that the number of years for a trial is always 1
   nL <- bsd$nLoc[trialType]; nR <- bsd$nRep[trialType]
@@ -27,8 +28,8 @@ runVDPtrial <- function(bsd, trialType, entries){
                                   varE=impliedVarE, simParam=bsd$SP)
   # Add the information to phenoRecords
   newRec <- tibble(year=bsd$year, trialID=bsd$nextTrialID, trialType=trialType,
-                   id=pheno@id, pheno=pheno@pheno, 
-                   errVar=bsd$errVars[trialType])
+                   id=pheno@id, pheno=pheno@pheno, selCrit=NA,
+                   errVar=impliedVarE)
   bsd$phenoRecords <- bsd$phenoRecords %>% bind_rows(newRec)
 
   # Manage the trialID number
@@ -45,12 +46,12 @@ runVDPtrial <- function(bsd, trialType, entries){
 #' @param bsd The breeding scheme data list
 #' @param toTrial String the trial type the entries are going to 
 #' @param fromTrial String the trial type the entries are coming from 
-#' @return Vector of entry IDs
+#' @return bsd updated with a vector of entry IDs in bsd$entries
 #' @details Accesses all data in phenoRecords to pick the highest 
 #' performing candidates.
 #'
 #' @examples
-#' entries <- chooseTrialEntries(bsd, toTrial, fromTrial)]
+#' bsd <- chooseTrialEntries(bsd, toTrial, fromTrial)]
 #'
 #' @export
 chooseTrialEntries <- function(bsd, toTrial, fromTrial=NULL){
@@ -58,7 +59,7 @@ chooseTrialEntries <- function(bsd, toTrial, fromTrial=NULL){
     require(here)
     on.exit(expr={
       print(traceback())
-      saveRDS(mget(ls()), file=here::here("data/chooseTrialEntries.rds"))
+      saveRDS(mget(ls()), file=here::here("data", "chooseTrialEntries.rds"))
     })
   }
   
@@ -69,16 +70,22 @@ chooseTrialEntries <- function(bsd, toTrial, fromTrial=NULL){
   } else{
     nToSelect <- bsd$nEntries[toTrial]
     phenoRecords <- bsd$phenoRecords
-    if (!is.null(fromTrial)){
-      phenoRecords <- phenoRecords %>% filter(trialType == fromTrial &
-                                                year == bsd$year - 1)
-    }
     candidates <- phenoRecords %>% pull(id) %>% unique
+    if (!is.null(fromTrial)){
+      candidates <- phenoRecords %>% 
+        dplyr::filter(trialType == fromTrial & year == bsd$year - 1) %>% 
+        pull(id) %>% unique
+      phenoRecords <- phenoRecords %>% dplyr::filter(id %in% candidates)
+    }
     if (nrow(phenoRecords) > length(candidates)){ # There is some replication
       crit <- iidPhenoEval(phenoRecords)
     } else{
       crit <- phenoRecords %>% pull(pheno)
       names(crit) <- phenoRecords %>% pull(id)
+    }
+    # Add crit to phenoRecords
+    for (n in names(crit)){
+      bsd$phenoRecords$selCrit[bsd$phenoRecords$id == n] <- crit[n]
     }
     if (length(candidates) < nToSelect){
       # Workaround for a problem that should only happen in the transition from
@@ -92,7 +99,7 @@ chooseTrialEntries <- function(bsd, toTrial, fromTrial=NULL){
       nIndBack <- min(nIndBack, nBreedInd)
       breedPopIDs <- bsd$breedingPop@id[nBreedInd - nIndBack + 
                                           1:bsd$nBreedingProg]
-      bsd <<- makeVarietyCandidates(bsd, breedPopIDs, nCand) # WARNING
+      bsd <- makeVarietyCandidates(bsd, breedPopIDs, nCand) 
       nVarInd <- AlphaSimR::nInd(bsd$varietyCandidates)
       entries <- c(candidates, 
                       bsd$varietyCandidates@id[nVarInd - (nCand - 1):0])
@@ -101,8 +108,9 @@ chooseTrialEntries <- function(bsd, toTrial, fromTrial=NULL){
       entries <- crit[(crit %>% order(decreasing=T))[1:nToSelect]] %>% names
     }
   }
+  bsd$entries <- entries
   if (bsd$debug) on.exit()
-  return(entries)
+  return(bsd)
 }
 
 #' makeVarietyCandidates function
