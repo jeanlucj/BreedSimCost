@@ -8,10 +8,9 @@ TRUE
 # Species characteristics
 # Number of chromosomes
 nChr
-4
+7
 
 # Population characteristics
-
 # Effective size of population generating the founders
 effPopSize
 100
@@ -22,7 +21,7 @@ segSites
 
 # Number of QTL per chromosome
 nQTL
-50
+100
 
 # Number of observed SNP per chromosome
 nSNP
@@ -41,9 +40,13 @@ gxyxlVar
 5
 
 # Mean and variance of dominance degree
+# See AlphaSimR documentation. meanDD=0 means additive
+# model. meanDD > 0 means heterozygotes are more similar
+# to the high parent
+# relAA controls how much AxA epistasis there is
 meanDD
 0.0
 varDD
-0.001
+0.01
 relAA
 0.5

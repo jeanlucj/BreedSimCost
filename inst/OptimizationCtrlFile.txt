@@ -1,59 +1,77 @@
 # Implementation details for optimization
 # Get rid of parallel processing if debugging
 debug
-FALSE
+TRUE
 
 # Print stuff as the optimization goes along
 verbose
 FALSE
 
 # Save intermediate results as you go along
+# Assuming a workflowR directory structure, results will
+# be saved in the data folder
 saveIntermediateResults
 TRUE
 
 # Number of cores for parallel processing
 nCores
-3
+6
 
 # parameters for initial grid search
 # each percentage vector should be nStages + 1
 # The first value is for the population improvement cycle
+# Watch out! The grid is a full factorial so use a coarse
+# step to avoid the grid search doing a LOT of simulations
 minPercentage
-0.20 0.30 0.10 0.10
+0.10 0.20 0.05 0.05
 
 maxPercentage
-0.60 0.70 0.30 0.30
+0.70 0.80 0.45 0.45
 
 percentageStep
 0.20 0.20 0.20 0.20
 
 # Minimum number of breeding progeny in PIC
+# If the budget for PIC is very small, the number of
+# progeny in each cycle will be too small to make sense
 minNBreedingProg
 2
 
 # Number of variety candidates in the last stage
 # that will go to the marketing department. Also the
 # minimum number of entries in the last stage
+# Assume marketing does extensive on-farm trials
 nToMarketingDept
 4
 
 # How small should the confidence interval
-# on budgets be before you stop
+# on budgets be before you stop optimization? All budgets
+# that have a gain within 2 StdErr of the best are
+# included in the confidence interval. For each stage
+# the difference between min and max budgets must be
+# below the tolerance
 tolerance
-0.4
+0.40
 
-# When running batches of simulations, how many sims per batch?
+# Optimization runs a batch of simulations, analyzes
+# them to estimate and optimum, then, if tolerance not
+# met, runs another batch: How many sims per batch?
 batchSize
-20
+72
 
-# How many batches should you do before you quit
+# How many batches should you do before you give up
+# to prevent an optimization from running forever
 maxNumBatches
-3
-
-# When redoing simulations, how many should be high gain?
-nHighGain
 10
 
-#When redoing simulations, how many should be high uncertainty?
+# In preparing the next batch of simulations, the
+# optimization will redo some number that had high
+# gain and some number for which the StdErr of the gain
+# was high.
+# For the next batch how many sims should be high gain?
+nHighGain
+50
+
+# For the next batch how many should be high uncertainty?
 nUncertain
-5
+10

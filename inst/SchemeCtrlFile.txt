@@ -1,14 +1,17 @@
-# Variety Development Pipeline
-# The number of cycles to run the scheme
+# Variety Development Pipeline (VDP)
+# The number of cycles to run the two-part scheme
 nCyclesToRun
-3
+4
 
 # How many burn-in cycles of phenotypic selection before
 # starting the two-part genomic selection?
 nBurnInCycles
-5
+4
 
-# The number of stages simulated and retained in the records
+# The number of VDP stages
+# Each stage has an error variance specific to it
+# That should relate to the genetic variance given
+# in the FounderCtrlFile
 nStages
 3
 stageNames
@@ -30,7 +33,7 @@ nLocs
 errVars
 400 120 70
 
-# Population Improvement Cycle
+# Population Improvement Cycle (PIC)
 # Effective population size for optimal contributions
 optiContEffPop
 20
@@ -39,22 +42,28 @@ optiContEffPop
 nBreedingProg
 70
 
-# Number of genomic selection cycles per year for population improvement
+# Number of genomic selection cycles per year in PIC
 nPopImpCycPerYear
 2
 
-# Number of cycles back of variety candidates for training
+# Number of years back VDP trials for training
+# A higher number here will mean a larger TP, but also
+# slower simulations
 keepNTrainingCyc
-2
+3
 
-# Number of cycles back of breeding individuals as parent candidates
+# Number of cycles back of breeding individuals as 
+# parent candidates. If you put a number >1, then 
+# "older" individuals could be chosen as parents
+# Given optimal contributions, I don't see any down
+# side to having a number >1
 keepNBreedingCyc
 1
 
 # Can candidates in the variety development pipeline be used
 # as parents in the population improvement cycle?  Setting
-# this to true may be useful if `makeVarietyCandidates`
-# is equivalent to cloning
+# this to true may be useful if the function
+# `makeVarietyCandidates` is equivalent to cloning
 # WARNING: if TRUE any VDP candidate in keepNTrainingCyc
 # WARNING: can be used as a parent. You may want to restrict
 # WARNING: it to VDP candidates that are > 1 year old

@@ -1,22 +1,32 @@
 # Program costs
 # SDN CET PYT
+# Vector of plot costs, must be nStages long, from the
+# SchemeCtrlFile
 plotCosts
 5 20 30
 
 # Cost per location. Will be multiplied by the max nLocs
-# I have no idea what a good number would be
+# from the SchemeCtrlFile
 perLocationCost
 1000
 
-# Crossing cost
+# Crossing cost: How much does it cost to make the cross
+# and develop the individual to where it could serve as
+# a parent. Used to figure out the PIC budget
 crossingCost
 0.2
 
 # Cost of creating a variety candidate from a breeding individual
+# The cost of the first VDP stage will be increased by the
+# number of entries * candidateDevelCost
 candidateDevelCost
 2
 
-# Genotyping cost
+# Genotyping cost: how these costs are used has to be specified
+# in the `calcBudget` function. One possible use is
+# 1. All PIC progeny incur the wholeGenomeCost
+# 2. All variety candidates incur the wholeGenomeCost when they
+# are first made, and the qcGenoCost for each VDP stage
 qcGenoCost
 1.5
 wholeGenomeCost
