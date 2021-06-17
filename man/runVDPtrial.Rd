@@ -4,7 +4,7 @@
 \alias{runVDPtrial}
 \title{runVDPtrial function}
 \usage{
-runVDPtrial(bsd, trialType, entries)
+runVDPtrial(bsd, trialType)
 }
 \arguments{
 \item{bsd}{The breeding scheme data list}
@@ -24,6 +24,6 @@ Function to run a variety development pipeline stage
 Add records to phenoRecords
 }
 \examples{
-params <- runVDPtrial(bsd, trialType, entries)
+params <- runVDPtrial(bsd, trialType)
 
 }

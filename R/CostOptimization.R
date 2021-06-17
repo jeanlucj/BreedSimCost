@@ -96,6 +96,14 @@ calcBudget <- function(bsd){
 #'
 #' @export
 budgetToScheme <- function(percentages, bsd){
+  if (bsd$debug){
+    require(here)
+    on.exit(expr={
+      print(traceback())
+      saveRDS(mget(ls()), file=here::here("data", "budgetToScheme.rds"))
+    })
+  }
+  
   targetBudget <- bsd$initBudget["budget"] - bsd$initBudget["locationCosts"]
   
   numbersFromPercentages <- function(percentages){
@@ -112,7 +120,7 @@ budgetToScheme <- function(percentages, bsd){
     nEntries <- round(stageBudgets / costPerEntry)
     names(nEntries) <- bsd$stageNames
     return(list(nBreedingProg, nEntries))
-  }
+  }#END numbersFromPercentages
   nBreedingProg <- numbersFromPercentages(percentages)
   nEntries <- nBreedingProg[[2]]
   nBreedingProg <- nBreedingProg[[1]]
@@ -125,20 +133,21 @@ budgetToScheme <- function(percentages, bsd){
     # Decide what percentages to go toward
     if (nrow(bsd$results) > 0){
       percBest <- bsd$results %>% slice(which.max(fit)) %>% 
-        select(starts_with("perc")) %>% unlist
+        dplyr::select(starts_with("perc")) %>% unlist
     } else{
-      percBest <- bsd$budget[grep("perc", names(bsd$budget))]
+      percBest <- bsd$initBudget[grep("perc", names(bsd$initBudget))]
     }
     # minPICbudget, minLastStgBudget
     lambda1 <- lambda2 <- 0
     if (failure1){
       a <- percentages[1]
-      lambda1 <- (bsd$initBudget["minPICbudget"] - a) / (perc[1] - a)
+      lambda1 <- (bsd$initBudget["minPICbudget"] - a) / 
+        (dplyr::first(percBest) - a)
     }
     if (failure2){
       b <- dplyr::last(percentages)
       lambda2 <- (bsd$initBudget["minLastStgBudget"] - b) / 
-        (dplyr::last(perc) - b)
+        (dplyr::last(percBest) - b)
     }
     lambda <- if_else(lambda1 > lambda2, lambda1, lambda2)
     percentages <- (1 - lambda) * percentages + lambda * percBest
@@ -154,8 +163,11 @@ budgetToScheme <- function(percentages, bsd){
     bsd$nBreedingProg <- nBreedingProg
     bsd$nEntries <- nEntries
     bsd$realizedBudget <- calcBudget(bsd)
+    bsd$percentages <- percentages
   }
   bsd$failure <- failure
+  
+  if (bsd$debug) on.exit()
   return(bsd)
 }
 
@@ -223,6 +235,7 @@ runWithBudget <- function(percentages, bsd, returnBSD=F){
   s <- Sys.time()
   percentages <- unlist(percentages)
   bsd <- budgetToScheme(percentages, bsd)
+  percentages <- unlist(bsd$percentages)
   if (bsd$verbose) cat(percentages, bsd$failure, "\n")
   if (bsd$failure){
     if (bsd$verbose) print(Sys.time() - s)
@@ -306,7 +319,7 @@ runBatch <- function(batchBudg, bsd){
                               paste0("init", c("PopMean", "PopSD", "VarMean")),
                               paste0("end", c("PopMean", "PopSD", "VarMean")), 
                               "Budget")
-  batchResults <- batchResults %>% mutate(response = endVarMean - initPopMean)
+  batchResults <- batchResults %>% dplyr::mutate(response = endVarMean - initPopMean)
   
   if (bsd$debug) on.exit()
   return(batchResults)
@@ -407,7 +420,7 @@ optimizeByLOESS <- function(bsd){
                    paste0(colnames(bsd$results)[1:bsd$nStages], collapse=" + "))
     loFM <- loess(loFormula, data=bsd$results, degree=1)
     loPred <- predict(loFM, se=T)
-    bsd$results <- bsd$results %>% mutate(fit=loPred$fit, se=loPred$se.fit)
+    bsd$results <- bsd$results %>% dplyr::mutate(fit=loPred$fit, se=loPred$se.fit)
     # 4. Evaluate stopping rule
     bestGain <- which.max(bsd$results$fit)
     bestSE <- bsd$results$se[bestGain]

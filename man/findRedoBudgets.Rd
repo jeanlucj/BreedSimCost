@@ -4,12 +4,10 @@
 \alias{findRedoBudgets}
 \title{findRedoBudgets function}
 \usage{
-findRedoBudgets(bsd, results)
+findRedoBudgets(bsd)
 }
 \arguments{
 \item{bsd}{List of breeding scheme data}
-
-\item{results}{List with the results of simulations so far}
 }
 \value{
 List of two vectors one with high gain budgets
@@ -23,6 +21,6 @@ gain and the budgets with high gain but also high uncertainty
 Call this function to choose which budgets to try again
 }
 \examples{
-bsd <- findRedoBudgets(bsd, results)
+bsd <- findRedoBudgets(bsd)
 
 }

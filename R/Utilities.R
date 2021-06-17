@@ -261,13 +261,15 @@ calcCurrentStatus <- function(bsd){
     filter(trialType == bsd$stageNames[bsd$nStages]) %>%
     filter(year == max(year))
   
-  crit <- if_else(any(is.na(lastStgRec$selCrit)), 
-                  pull(lastStgRec, pheno),
-                  pull(lastStgRec, selCrit))
+  if(any(is.na(lastStgRec$selCrit))){
+    crit <- pull(lastStgRec, pheno)
+  } else{
+    crit <- pull(lastStgRec, selCrit)
+  }
   bestVarCand <- pull(lastStgRec, id)[
     order(crit, decreasing=T)[1:bsd$nToMarketingDept]
     ]
-  varCandMean <- mean(gv(bestVarCand))
+  varCandMean <- mean(gv(bsd$varietyCandidates[bestVarCand]))
   return(c(breedPopMean=breedPopMean, breedPopSD=breedPopSD, 
            varCandMean=varCandMean))
 }

@@ -14,7 +14,7 @@ chooseTrialEntries(bsd, toTrial, fromTrial = NULL)
 \item{fromTrial}{String the trial type the entries are coming from}
 }
 \value{
-Vector of entry IDs
+bsd updated with a vector of entry IDs in bsd$entries
 }
 \description{
 Function to select which varieties to advance to the next stage assuming
@@ -25,6 +25,6 @@ Accesses all data in phenoRecords to pick the highest
 performing candidates.
 }
 \examples{
-entries <- chooseTrialEntries(bsd, toTrial, fromTrial)]
+bsd <- chooseTrialEntries(bsd, toTrial, fromTrial)]
 
 }
