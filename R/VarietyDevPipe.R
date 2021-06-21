@@ -118,7 +118,7 @@ chooseTrialEntries <- function(bsd, toTrial, fromTrial=NULL){
 #' @param bsd List of breeding program data
 #' @param breedPopIDs String vector IDs of breeding pop progenitors
 #' of the variety candidates.  If NULL, the last nBreedingProg individuals used
-#' @param nCandidates Make bespoke number of candidates if neede on the fly
+#' @param nCandidates Make bespoke number of candidates if needed on the fly
 #'
 #' @return Updated bsd with new variety candidates in bsd$varietyCandidates
 #' @details Here, creates DHs evenly distributed among the breeding progeny
@@ -128,35 +128,51 @@ chooseTrialEntries <- function(bsd, toTrial, fromTrial=NULL){
 #'
 #' @export
 makeVarietyCandidates <- function(bsd, breedPopIDs=NULL, nCandidates=NULL){
-  if (is.null(breedPopIDs)){ # Takes the last bsd$nBreedingProg
-    nInd <- nInd(bsd$breedingPop)
-    nIndMax <- min(nInd, bsd$nBreedingProg)
-    breedPopIDs <- bsd$breedingPop@id[nInd - (nIndMax - 1):0]
-  }
-  nInd <- length(breedPopIDs)
   if (is.null(nCandidates)) nCandidates <- bsd$nEntries[1]
-  nDH <- nCandidates %/% nInd
-  if (nDH > 0){
-    newCand <- makeDH(bsd$breedingPop[breedPopIDs], nDH=nDH, simParam=bsd$SP)
-  }
-  nExtra <- nCandidates %% nInd
-  if (nExtra > 0){
-    whichPar <- sample(nInd, nExtra)
-    extraCand <- makeDH(bsd$breedingPop[breedPopIDs][whichPar], 
-                        nDH=1, simParam=bsd$SP)
-    if (exists("newCand")){
-      newCand <- c(newCand, extraCand)
-    } else{
-      newCand <- extraCand
-    }
-  }
+  nInd <- nInd(bsd$breedingPop)
+  swtich(bsd$varietyType,
+         clonal = {
+           if (is.null(breedPopIDs)){ # Take the last breeding pop progeny
+             if (nInd < nCandidates) stop("Not enough breeding pop progeny")
+             if (bsd$nPopImpCycPerYear*bsd$nBreedingProg < nCandidates)
+               print("Previous-year Breeding pop progeny will be reused")
+             newCand <- bsd$breedingPop[nInd - (nCandidates - 1):0]
+           } else{
+             newCand <- bsd$breedingPop[breedPopIDs]
+           }
+         }, 
+         inbred = {
+           if (is.null(breedPopIDs)){ # Take the last bsd$nBreedingProg
+             nIndMax <- min(nInd, bsd$nBreedingProg)
+             breedPopIDs <- bsd$breedingPop@id[nInd - (nIndMax - 1):0]
+           }
+           nInd <- length(breedPopIDs)
+           nDH <- nCandidates %/% nInd
+           if (nDH > 0){
+             newCand <- makeDH(bsd$breedingPop[breedPopIDs], 
+                               nDH=nDH, simParam=bsd$SP)
+           }
+           nExtra <- nCandidates %% nInd
+           if (nExtra > 0){
+             whichPar <- sample(nInd, nExtra)
+             extraCand <- makeDH(bsd$breedingPop[breedPopIDs][whichPar], 
+                                 nDH=1, simParam=bsd$SP)
+             if (exists("newCand")){
+               newCand <- c(newCand, extraCand)
+             } else{
+               newCand <- extraCand
+             }
+           }
+         }#END inbred
+         )#END switch
+  
   # Update varietyCandidates population
   if (exists("varietyCandidates", bsd)){
     bsd$varietyCandidates <- c(bsd$varietyCandidates, newCand)
   } else{
     bsd$varietyCandidates <- newCand
   }
-
+  
   return(bsd)
 }
 

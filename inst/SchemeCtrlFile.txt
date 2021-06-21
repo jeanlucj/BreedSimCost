@@ -60,12 +60,15 @@ keepNTrainingCyc
 keepNBreedingCyc
 1
 
-# Can candidates in the variety development pipeline be used
-# as parents in the population improvement cycle?  Setting
-# this to true may be useful if the function
-# `makeVarietyCandidates` is equivalent to cloning
-# WARNING: if TRUE any VDP candidate in keepNTrainingCyc
-# WARNING: can be used as a parent. You may want to restrict
-# WARNING: it to VDP candidates that are > 1 year old
-varietiesCanBeParents
-FALSE
+# How old does a breeding individual need to be before
+# it can be used as a parent? A value of 0 means that
+# as soon as it comes off the crossing block it can go
+# into a crossing nursery
+minParentAge
+0
+
+# What kind of variety does the program develop?
+# The two types that are supported (18June21) are
+# clonal and inbred
+varietyType
+Inbred

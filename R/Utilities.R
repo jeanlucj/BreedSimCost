@@ -32,7 +32,7 @@ initializeProgram <- function(founderFile, schemeFile,
   parmNames <- c("nCyclesToRun", "nBurnInCycles", "nStages", "stageNames", 
                  "nEntries", "nReps", "nLocs", "errVars", "optiContEffPop",
                  "nBreedingProg", "nPopImpCycPerYear", "keepNTrainingCyc", 
-                 "keepNBreedingCyc", "varietiesCanBeParents")
+                 "keepNBreedingCyc", "minParentAge", "varietyType")
   bsdNew <- readControlFile(schemeFile, parmNames)
   bsd <- c(bsd, bsdNew)
   # Because different budget allocations will change these, store initial values
@@ -203,8 +203,7 @@ calcDerivedParms <- function(bsd){
   bsd$debug <- makeLogical(bsd$debug)
   bsd$verbose <- makeLogical(bsd$verbose)
   bsd$saveIntermediateResults <- makeLogical(bsd$saveIntermediateResults)
-  bsd$varietiesCanBeParents <- makeLogical(bsd$varietiesCanBeParents)
-  
+
   # Genetic architecture defaults
   if (nv(bsd$meanDD)) bsd$meanDD <- 0
   if (nv(bsd$varDD)) bsd$varDD <- 0

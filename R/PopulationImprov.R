@@ -17,13 +17,12 @@
 selectParents <- function(bsd){
   # Get GEBVs
   gebv <- grmPhenoEval(bsd)
-  if (!bsd$varietiesCanBeParents){
-    # Keep only breeding population
-    nInd <- nInd(bsd$breedingPop)
-    nIndMax <- min(nInd, bsd$nBreedingProg*bsd$keepNBreedingCyc)
-    selCan <- bsd$breedingPop@id[nInd - (nIndMax - 1):0]
-    gebv <- gebv[selCan]
-  }
+  # Keep only breeding population
+  nInd <- nInd(bsd$breedingPop)
+  nIndMax <- min(nInd, bsd$nBreedingProg*bsd$keepNBreedingCyc)
+  stopAt <- bsd$minParentAge*bsd$nPopImpCycPerYear
+  selCan <- bsd$breedingPop@id[nInd - (stopAt + (nIndMax - 1):0)]
+  gebv <- gebv[selCan]
   # Set up to use optiSel
   # 1. data.frame with a column named "Indiv" that has individual ids,
   # and a column named however you want with the selection criterion.
@@ -158,7 +157,7 @@ convertNamesToRows <- function(nameMat){
 
 #' calcGRM function
 #'
-#' Function to make a genomic relationship matrix to calculat GEBVs
+#' Function to make a genomic relationship matrix to calculate GEBVs
 #'
 #' @param bsd List of breeding scheme data
 #' @return A genomic relationship matrix
@@ -174,10 +173,18 @@ calcGRM <- function(bsd){
   require(sommer)
   nInd <- nInd(bsd$varietyCandidates)
   nIndMax <- min(nInd, bsd$nEntries[1]*bsd$keepNTrainingCyc)
-  allPop <- bsd$varietyCandidates[nInd - (nIndMax - 1):0]
+  allVar <- bsd$varietyCandidates[nInd - (nIndMax - 1):0]
   nInd <- nInd(bsd$breedingPop)
   nIndMax <- min(nInd, bsd$nBreedingProg*bsd$keepNBreedingCyc)
-  allPop <- c(allPop, bsd$breedingPop[nInd - (nIndMax - 1):0])
+  stopAt <- bsd$minParentAge*bsd$nPopImpCycPerYear
+  allPop <- bsd$breedingPop[nInd - (stopAt + (nIndMax - 1):0)]
+  switch(bsd$varietyType,
+         clonal = {
+           varNotPop <- setdiff(allVar@id, allPop@id)
+           if (length(varNotPop) > 0) allPop <- c(allVar[varNotPop], allPop)
+         },
+         allPop <- c(allVar, allPop)
+         )
 
   return(sommer::A.mat(AlphaSimR::pullSnpGeno(allPop, simParam=bsd$SP) - 1))
 }

@@ -252,7 +252,7 @@ runWithBudget <- function(percentages, bsd, returnBSD=F){
     for (stage in 1:bsd$nStages){
       bsd <- chooseTrialEntries(bsd, toTrial=bsd$stageNames[stage],
                    fromTrial=ifelse(stage == 1, NULL, bsd$stageNames[stage-1]))
-      bsd <- runVDPtrial(bsd, bsd$stageNames[stage])
+      bsd <- runVDPtrial(bsd, trialType=bsd$stageNames[stage])
     }
 
     # ... And then run the PIC. Sequencing could be made more complicated
