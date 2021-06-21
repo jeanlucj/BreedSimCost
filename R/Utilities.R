@@ -22,7 +22,7 @@
 initializeProgram <- function(founderFile, schemeFile, 
                               costFile, optimizationFile){
   # Read parameters to create founders
-  parmNames <- c("nChr", "effPopSize", "quickHaplo", 
+  parmNames <- c("varietyType", "nChr", "effPopSize", "quickHaplo", 
                  "segSites", "nQTL", "nSNP", "genVar", "gxeVar", 
                  "gxyVar", "gxlVar", "gxyxlVar", "meanDD", "varDD", 
                  "relAA")
@@ -32,7 +32,7 @@ initializeProgram <- function(founderFile, schemeFile,
   parmNames <- c("nCyclesToRun", "nBurnInCycles", "nStages", "stageNames", 
                  "nEntries", "nReps", "nLocs", "errVars", "optiContEffPop",
                  "nBreedingProg", "nPopImpCycPerYear", "keepNTrainingCyc", 
-                 "keepNBreedingCyc", "minParentAge", "varietyType")
+                 "keepNBreedingCyc", "minParentAge")
   bsdNew <- readControlFile(schemeFile, parmNames)
   bsd <- c(bsd, bsdNew)
   # Because different budget allocations will change these, store initial values

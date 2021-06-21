@@ -6,6 +6,12 @@ quickHaplo
 TRUE
 
 # Species characteristics
+# What kind of variety does the program develop?
+# The two types that are supported (18June21) are
+# clonal and inbred
+varietyType
+inbred
+
 # Number of chromosomes
 nChr
 7
