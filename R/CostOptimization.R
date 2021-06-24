@@ -134,7 +134,9 @@ budgetToScheme <- function(percentages, bsd){
   failure2 <- last(nEntries) < bsd$nToMarketingDept
   # Ensure that budget ratios are respected
   ratios <- percentages[-length(percentages)] / percentages[-1]
-  failure3 <- any(ratios < bsd$initBudget[grep("ratio", names(bsd$initBudget))])
+  rTooSmall <- (ratios < bsd$initBudget[grep("ratio", names(bsd$initBudget))])
+  if (bsd$varietyType == "inbred") rTooSmall <- rTooSmall[-1]
+  failure3 <- any(rTooSmall)
   if (failure1 | failure2 | failure3){
     # Decide what percentages to go toward
     if (nrow(bsd$results) > 0){
@@ -158,6 +160,11 @@ budgetToScheme <- function(percentages, bsd){
     if (failure3){
       optRatios <- percBest[-length(percBest)] / percBest[-1]
       minRatios <- bsd$initBudget[grep("ratio", names(bsd$initBudget))]
+      if (bsd$varietyType == "inbred"){
+        ratios <- ratios[-1]
+        optRatios <- optRatios[-1]
+        minRatios <- minRatios[-1]
+      }
       wr <- which(ratios < minRatios)
       d <- ratios[wr]
       lambda3 <- (minRatios[wr] - d) / (optRatios[wr] - d)
