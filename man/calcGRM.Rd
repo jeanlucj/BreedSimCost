@@ -13,7 +13,7 @@ calcGRM(bsd)
 A genomic relationship matrix
 }
 \description{
-Function to make a genomic relationship matrix to calculat GEBVs
+Function to make a genomic relationship matrix to calculate GEBVs
 }
 \details{
 bsd contains both variety candidates that have phenotypes and

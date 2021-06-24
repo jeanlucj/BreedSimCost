@@ -130,12 +130,12 @@ chooseTrialEntries <- function(bsd, toTrial, fromTrial=NULL){
 makeVarietyCandidates <- function(bsd, breedPopIDs=NULL, nCandidates=NULL){
   if (is.null(nCandidates)) nCandidates <- bsd$nEntries[1]
   nInd <- nInd(bsd$breedingPop)
-  swtich(bsd$varietyType,
+  switch(bsd$varietyType,
          clonal = {
            if (is.null(breedPopIDs)){ # Take the last breeding pop progeny
              if (nInd < nCandidates) stop("Not enough breeding pop progeny")
              if (bsd$nPopImpCycPerYear*bsd$nBreedingProg < nCandidates)
-               print("Previous-year Breeding pop progeny will be reused")
+               cat("Previous-year Breeding pop progeny will be reused", bsd$nPopImpCycPerYear*bsd$nBreedingProg, nCandidates, "\n")
              newCand <- bsd$breedingPop[nInd - (nCandidates - 1):0]
            } else{
              newCand <- bsd$breedingPop[breedPopIDs]

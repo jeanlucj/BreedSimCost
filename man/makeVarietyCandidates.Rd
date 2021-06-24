@@ -12,7 +12,7 @@ makeVarietyCandidates(bsd, breedPopIDs = NULL, nCandidates = NULL)
 \item{breedPopIDs}{String vector IDs of breeding pop progenitors
 of the variety candidates.  If NULL, the last nBreedingProg individuals used}
 
-\item{nCandidates}{Make bespoke number of candidates if neede on the fly}
+\item{nCandidates}{Make bespoke number of candidates if needed on the fly}
 }
 \value{
 Updated bsd with new variety candidates in bsd$varietyCandidates
