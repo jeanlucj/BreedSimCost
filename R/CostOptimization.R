@@ -35,12 +35,13 @@ calcBudget <- function(bsd){
   picBudget <- bsd$nBreedingProg * bsd$nPopImpCycPerYear * perPICprog
   
   # Variety Development Pipeline budget
-  perVDPentry <- bsd$plotCosts * bsd$nReps * bsd$nLocs + bsd$qcGenoCost
-  perVDPentry[1] <- perVDPentry[1] + bsd$candidateDevelCost + bsd$wholeGenomeCost
-  stageBudgets <- bsd$nEntries * perVDPentry
+  costPerEntry <- bsd$plotCosts * bsd$nReps * bsd$nLocs + bsd$qcGenoCost
+  costPerEntry[1] <- costPerEntry[1] + 
+    bsd$candidateDevelCost + bsd$wholeGenomeCost
+  stageBudgets <- bsd$nEntries * costPerEntry
   
   # Minimal ratios to ensure that stages have fewer entries going forward
-  minRatios <- c(perPICprog, perVDPentry[-bsd$nStages]) / perVDPentry
+  minRatios <- c(perPICprog, costPerEntry[-bsd$nStages]) / costPerEntry
 
   budget <- crossCosts + develCosts + genoCostsVDP +
     genoCostsPIC + trialCosts + locationCosts
@@ -146,7 +147,7 @@ budgetToScheme <- function(percentages, bsd){
       percBest <- bsd$initBudget[grep("perc", names(bsd$initBudget))]
     }
     # minPICbudget, minLastStgBudget
-    lambda1 <- lambda2 <- 0
+    lambda1 <- lambda2 <-lambda3 <- 0
     if (failure1){
       a <- percentages[1]
       lambda1 <- (bsd$initBudget["minPICbudget"] - a) / 
