@@ -47,7 +47,7 @@ calcBudget <- function(bsd){
     genoCostsPIC + trialCosts + locationCosts
   
   # Sanity check
-  if (budget != sum(picBudget, stageBudgets, locationCosts)){
+  if (abs(budget - sum(picBudget, stageBudgets, locationCosts)) > 1e-6){
     stop("There was a problem calculating the budget")
   }
   
@@ -135,12 +135,13 @@ budgetToScheme <- function(percentages, bsd){
   failure2 <- last(nEntries) < bsd$nToMarketingDept
   # Ensure that budget ratios are respected
   ratios <- percentages[-length(percentages)] / percentages[-1]
-  rTooSmall <- (ratios < bsd$initBudget[grep("ratio", names(bsd$initBudget))])
-  if (bsd$varietyType == "inbred") rTooSmall <- rTooSmall[-1]
-  failure3 <- any(rTooSmall)
+  if (bsd$varietyType == "inbred") ratios[1] <- 1e9
+  minRatios <- bsd$initBudget[grep("ratio", names(bsd$initBudget))]
+  whichRatios <- which(ratios < minRatios)
+  failure3 <- length(whichRatios) > 0
   if (failure1 | failure2 | failure3){
     # Decide what percentages to go toward
-    if (nrow(bsd$results) > 0){
+    if (exists("results", where=bsd)){
       percBest <- bsd$results %>% slice(which.max(fit)) %>% 
         dplyr::select(starts_with("perc")) %>% unlist
     } else{
@@ -159,16 +160,13 @@ budgetToScheme <- function(percentages, bsd){
         (dplyr::last(percBest) - b)
     }
     if (failure3){
-      optRatios <- percBest[-length(percBest)] / percBest[-1]
-      minRatios <- bsd$initBudget[grep("ratio", names(bsd$initBudget))]
-      if (bsd$varietyType == "inbred"){
-        ratios <- ratios[-1]
-        optRatios <- optRatios[-1]
-        minRatios <- minRatios[-1]
+      for (r in whichRatios){
+        p2c <- minRatios[r] * percentages[r+1]
+        p2o <- minRatios[r] * percBest[r+1]
+        l3 <- (p2c - percentages[r]) / 
+          ((p2c - percentages[r]) - (p2o - percBest[r]))
+        lambda3 <- max(l3, lambda3)
       }
-      wr <- which(ratios < minRatios)
-      d <- ratios[wr]
-      lambda3 <- (minRatios[wr] - d) / (optRatios[wr] - d)
     }
     lambda <- max(lambda1, lambda2, lambda3)
     percentages <- (1 - lambda) * percentages + lambda * percBest
@@ -428,14 +426,17 @@ optimizeByLOESS <- function(bsd){
   nBatchesDone <- 0
   toleranceMet <- FALSE
   allPercRanges <- list()
-  bsd$results <- tibble()
   # 1. Make grid batch
   batch <- makeGrid(bsd)
   while (nBatchesDone < bsd$maxNumBatches & !toleranceMet){
     # 2. Run batch
     newBatchOut <- runBatch(batch, bsd)
     # 3. Evaluate stopping rule
-    bsd$results <- bsd$results %>% bind_rows(newBatchOut)
+    if (!exists("results", where=bsd)){
+      bsd$results <- newBatchOut
+    } else{
+      bsd$results <- bsd$results %>% bind_rows(newBatchOut)
+    }
     # Non-Parametric LOESS response
     loFormula <- paste0("response ~ ", 
                    paste0(colnames(bsd$results)[1:bsd$nStages], collapse=" + "))
