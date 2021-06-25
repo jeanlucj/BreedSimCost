@@ -113,7 +113,7 @@ budgetToScheme <- function(percentages, bsd){
   numbersFromPercentages <- function(percentages){
     # Population Improvement Cycle budget
     picBudget <- targetBudget * percentages[1]
-    nBreedingProg <- round(picBudget / bsd$nPopImpCycPerYear /
+    nBreedingProg <- ceiling(picBudget / bsd$nPopImpCycPerYear /
                              (bsd$crossingCost + bsd$wholeGenomeCost))
     
     # Variety Development Pipeline budget
