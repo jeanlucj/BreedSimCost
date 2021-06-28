@@ -132,12 +132,12 @@ budgetToScheme <- function(percentages, bsd){
   # Ensure that the population improvement cycle generates enough progeny
   failure1 <- nBreedingProg < bsd$minNBreedingProg
   # Ensure that enough variety candidates are in the final stage
-  failure2 <- last(nEntries) < bsd$nToMarketingDept
+  failure2 <- dplyr::last(nEntries) < bsd$nToMarketingDept
   # Ensure that budget ratios are respected
   ratios <- percentages[-length(percentages)] / percentages[-1]
   if (bsd$varietyType == "inbred") ratios[1] <- 1e9
   minRatios <- bsd$initBudget[grep("ratio", names(bsd$initBudget))]
-  whichRatios <- which(ratios < minRatios)
+  whichRatios <- which(minRatios - ratios > 1e-6)
   failure3 <- length(whichRatios) > 0
   if (failure1 | failure2 | failure3){
     # Decide what percentages to go toward
