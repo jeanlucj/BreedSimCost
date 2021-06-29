@@ -368,12 +368,12 @@ loessPredCount <- function(resultMat, nSim=nrow(resultMat),
 #'
 #' @export
 plotLoessPred <- function(resultMat, nSim=nrow(resultMat), 
-                     xlim=NULL, ylim=NULL, 
+                     xlim=NULL, ylim=NULL, loessDegree=1,
                      budg1=1, budg2=2, binMeanContrast=3, plotHiCt=F){
   require(hexbin)
   require(grid)
   lpc <- loessPredCount(resultMat, nSim, xlim=NULL, 
-                        ylim=NULL, budg1=1, budg2=2)
+                        ylim=NULL, budg1=1, budg2=2, loessDegree=loessDegree)
   bmc <- binMeanContrast
   
   binRange <- diff(range(lpc$binMean))^bmc
