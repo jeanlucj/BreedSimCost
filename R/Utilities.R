@@ -21,6 +21,7 @@
 #' @export
 initializeProgram <- function(founderFile, schemeFile, 
                               costFile, optimizationFile){
+  # FounderFile
   # Read parameters to create founders
   parmNames <- c("varietyType", "nChr", "effPopSize", "quickHaplo", 
                  "segSites", "nQTL", "nSNP", "genVar", "gxeVar", 
@@ -28,6 +29,7 @@ initializeProgram <- function(founderFile, schemeFile,
                  "relAA")
   bsd <- readControlFile(founderFile, parmNames)
 
+  # SchemeFile
   # Read parameters about the overall scheme
   parmNames <- c("nCyclesToRun", "nBurnInCycles", "nStages", "stageNames", 
                  "nEntries", "nReps", "nLocs", "errVars", "optiContEffPop",
@@ -39,18 +41,20 @@ initializeProgram <- function(founderFile, schemeFile,
   bsd$initNEntries <- bsd$nEntries
   bsd$initNBreedingProg <- bsd$nBreedingProg
   
+  # CostFile
   # Read parameters about scheme costs
   parmNames <- c("plotCosts", "perLocationCost", "crossingCost", 
                  "candidateDevelCost", "qcGenoCost", "wholeGenomeCost")
   bsdNew <- readControlFile(costFile, parmNames)
   bsd <- c(bsd, bsdNew)
   
+  # OptimizationFile
   # Read parameters about optimization procedure
   parmNames <- c("nCores", "minPercentage", "maxPercentage",
                  "percentageStep", "minNBreedingProg", "nToMarketingDept",
                  "tolerance", "batchSize", "maxNumBatches",
                  "nHighGain", "nUncertain", "debug", 
-                 "verbose", "saveIntermediateResults")
+                 "verbose", "saveIntermediateResults", "loessDegree")
   bsdNew <- readControlFile(optimizationFile, parmNames)
   bsd <- c(bsd, bsdNew)
   
@@ -291,7 +295,7 @@ calcCurrentStatus <- function(bsd){
 #' @export
 loessPredCount <- function(resultMat, nSim=nrow(resultMat), 
                       xlim=NULL, ylim=NULL, 
-                      budg1=1, budg2=2){
+                      budg1=1, budg2=2, loessDegree=1){
   require(hexbin)
   if (is.null(xlim)){
     xlim <- c(floor(min(resultMat[,budg1])*50-0.5)/50, 
@@ -303,10 +307,11 @@ loessPredCount <- function(resultMat, nSim=nrow(resultMat),
   }
   
   uptoResults <- resultMat[1:nSim,]
+  # Non-Parametric LOESS response
   predictors <- resultMat %>% colnames %>% stringr::str_subset("perc")
   predictors <- predictors[-length(predictors)]
   loFormula <- paste0("response ~ ", paste0(predictors, collapse=" + "))
-  loFM <- stats::loess(loFormula, data=uptoResults)
+  loFM <- stats::loess(loFormula, data=uptoResults, degree=loessDegree)
   loPred <- predict(loFM, se=T)
   
   # Make the bins!

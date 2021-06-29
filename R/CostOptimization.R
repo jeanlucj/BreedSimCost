@@ -371,7 +371,7 @@ findRedoBudgets <- function(bsd){
   # Non-Parametric LOESS response
   loFormula <- paste0("response ~ ", 
                       paste0(colnames(results)[1:bsd$nStages], collapse=" + "))
-  loFM <- loess(loFormula, data=results, degree=1)
+  loFM <- loess(loFormula, data=results, degree=bsd$loessDegree)
   loPred <- predict(loFM, se=T)
   loPred <- tibble(fit=loPred$fit, se=loPred$se.fit, simNum=1:nrow(results))
   # Budgets with the highest response
@@ -440,7 +440,7 @@ optimizeByLOESS <- function(bsd){
     # Non-Parametric LOESS response
     loFormula <- paste0("response ~ ", 
                    paste0(colnames(bsd$results)[1:bsd$nStages], collapse=" + "))
-    loFM <- loess(loFormula, data=bsd$results, degree=1)
+    loFM <- loess(loFormula, data=bsd$results, degree=bsd$loessDegree)
     loPred <- predict(loFM, se=T)
     bsd$results <- bsd$results %>% dplyr::mutate(fit=loPred$fit, se=loPred$se.fit)
     # 4. Evaluate stopping rule
