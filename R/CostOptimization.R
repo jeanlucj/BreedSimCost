@@ -377,8 +377,8 @@ findRedoBudgets <- function(bsd){
   # Budgets with the highest response
   whichBest <- order(loPred$fit, decreasing=T)[1:bsd$nHighGain]
   # Budgets with the high response and high uncertainty
-  ndRows <- findNonDom(loPred, dir1Low=F, dir2Low=F, 
-                     var1name="fit", var2name="se")
+  ndRows <- findNonDom(loPred, dir1Low=F, dir2Low=F,
+                       var1name="fit", var2name="se")
   # Remove ones too far from the best
   fitDist <- loPred$fit[whichBest[1]] - ndRows$fit
   keep <- which(fitDist < ndRows$se*4)
@@ -468,8 +468,9 @@ optimizeByLOESS <- function(bsd){
         }
         return(combo)
       }#END combineBudg
-      batch <- c(batch, 
-                 lapply(1:(bsd$batchSize - length(batch)), combineBudg, batch))
+      # batch <- c(batch, 
+      #            lapply(1:(bsd$batchSize - length(batch)), combineBudg, batch))
+      batch <- lapply(1:bsd$batchSize, combineBudg, batch)
     }#END !toleranceMet
     allPercRanges <- c(allPercRanges, list(list(percRanges, 
       nSimClose=length(bestClose), bestGain=bsd$results$fit[bestGain],
