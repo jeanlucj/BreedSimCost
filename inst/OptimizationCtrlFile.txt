@@ -75,8 +75,3 @@ nHighGain
 # For the next batch how many should be high uncertainty?
 nUncertain
 10
-
-# For LOESS smoothing, what polynomial degree (this is
-# mostly for testing)
-loessDegree
-2

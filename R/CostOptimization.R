@@ -364,14 +364,14 @@ findRedoBudgets <- function(bsd){
   if (bsd$debug){  require(here)
     on.exit(expr={
       print(traceback())
-      saveRDS(mget(ls()), file=here::here("data/findRedoBudgets.rds"))
+      saveRDS(mget(ls()), file=here::here("data", "findRedoBudgets.rds"))
     })
   }
   results <- bsd$results
   # Non-Parametric LOESS response
   loFormula <- paste0("response ~ ", 
                       paste0(colnames(results)[1:bsd$nStages], collapse=" + "))
-  loFM <- stats::loess(loFormula, data=results, degree=bsd$loessDegree)
+  loFM <- stats::loess(loFormula, data=results, degree=1)
   loPred <- predict(loFM, se=T)
   loPred <- tibble(fit=loPred$fit, se=loPred$se.fit, simNum=1:nrow(results))
   # Budgets with the highest response
@@ -419,7 +419,7 @@ optimizeByLOESS <- function(bsd){
     require(here)
     on.exit(expr={
       print(traceback())
-      saveRDS(mget(ls()), file=here::here("data/optimizeByLOESS.rds"))
+      saveRDS(mget(ls()), file=here::here("data", "optimizeByLOESS.rds"))
     })
   }
   
@@ -440,7 +440,7 @@ optimizeByLOESS <- function(bsd){
     # Non-Parametric LOESS response
     loFormula <- paste0("response ~ ", 
                    paste0(colnames(bsd$results)[1:bsd$nStages], collapse=" + "))
-    loFM <- stats::loess(loFormula, data=bsd$results, degree=bsd$loessDegree)
+    loFM <- stats::loess(loFormula, data=bsd$results, degree=1)
     loPred <- predict(loFM, se=T)
     bsd$results <- bsd$results %>% dplyr::mutate(fit=loPred$fit, se=loPred$se.fit)
     # 4. Evaluate stopping rule
@@ -481,8 +481,8 @@ optimizeByLOESS <- function(bsd){
     if (bsd$saveIntermediateResults){
       # Save batches and results
       require(here)
-      saveRDS(bsd$results, file=here::here("data", "allBatches.rds"))
-      saveRDS(allPercRanges, file=here::here("data", "allPercentRanges.rds"))
+      saveRDS(bsd$results, file=here::here("output", "allBatches.rds"))
+      saveRDS(allPercRanges, file=here::here("output", "allPercentRanges.rds"))
     }
     
   }#END go through batches

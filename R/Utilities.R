@@ -54,7 +54,7 @@ initializeProgram <- function(founderFile, schemeFile,
                  "percentageStep", "minNBreedingProg", "nToMarketingDept",
                  "tolerance", "batchSize", "maxNumBatches",
                  "nHighGain", "nUncertain", "debug", 
-                 "verbose", "saveIntermediateResults", "loessDegree")
+                 "verbose", "saveIntermediateResults")
   bsdNew <- readControlFile(optimizationFile, parmNames)
   bsd <- c(bsd, bsdNew)
   
@@ -295,7 +295,7 @@ calcCurrentStatus <- function(bsd){
 #' @export
 loessPredCount <- function(resultMat, nSim=nrow(resultMat), 
                       xlim=NULL, ylim=NULL, 
-                      budg1=1, budg2=2, loessDegree=1){
+                      budg1=1, budg2=2){
   require(hexbin)
   if (is.null(xlim)){
     xlim <- c(floor(min(resultMat[,budg1])*50-0.5)/50, 
@@ -311,7 +311,7 @@ loessPredCount <- function(resultMat, nSim=nrow(resultMat),
   predictors <- resultMat %>% colnames %>% stringr::str_subset("perc")
   predictors <- predictors[-length(predictors)]
   loFormula <- paste0("response ~ ", paste0(predictors, collapse=" + "))
-  loFM <- stats::loess(loFormula, data=uptoResults, degree=loessDegree)
+  loFM <- stats::loess(loFormula, data=uptoResults, degree=1)
   loPred <- predict(loFM, se=T)
   
   # Make the bins!
@@ -368,12 +368,12 @@ loessPredCount <- function(resultMat, nSim=nrow(resultMat),
 #'
 #' @export
 plotLoessPred <- function(resultMat, nSim=nrow(resultMat), 
-                     xlim=NULL, ylim=NULL, loessDegree=1,
+                     xlim=NULL, ylim=NULL,
                      budg1=1, budg2=2, binMeanContrast=3, plotHiCt=F){
   require(hexbin)
   require(grid)
   lpc <- loessPredCount(resultMat, nSim, xlim=NULL, 
-                        ylim=NULL, budg1=1, budg2=2, loessDegree=loessDegree)
+                        ylim=NULL, budg1=1, budg2=2)
   bmc <- binMeanContrast
   
   binRange <- diff(range(lpc$binMean))^bmc
