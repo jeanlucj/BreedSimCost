@@ -247,8 +247,9 @@ calcDerivedParms <- function(bsd){
 #' Calculate mean and variance statistics on your current breeding program.
 #'
 #' @param bsd List of breeding program data
-#' @return A vector extracting breeding population means and variances
-#'
+#' @return A vector extracting breeding population means and variances:
+#' breedPopMean, breedPopSD, varCandMean
+#' 
 #' @details This function is only called internally by other functions used to specify the pipeline
 #'
 #' @export
@@ -316,7 +317,8 @@ loessPredCount <- function(resultMat, nSim=nrow(resultMat),
   
   # Make the bins!
   bins <- hexbin::hexbin(cbind(uptoResults[,budg1], uptoResults[,budg2]), 
-                 xbnds=xlim, ybnds=ylim)
+            xbnds=xlim, ybnds=ylim, 
+            xlab=colnames(resultMat)[budg1], ylab=colnames(resultMat)[budg2])
   
   # Mean gain for each hexagon
   calcDistToCell <- function(hex){
@@ -326,7 +328,8 @@ loessPredCount <- function(resultMat, nSim=nrow(resultMat),
   allDist <- lapply(1:bins@ncells, calcDistToCell)
   allDist <- matrix(unlist(allDist), nSim)
   closeBin <- apply(allDist, 1, which.min)
-  # If bin empty steal observation closest to that bin not sure why this happens
+  # If bin empty steal observation closest to that bin 
+  # Not sure why this happens
   occBins <- sort(unique(closeBin))
   emptyBins <- setdiff(1:max(occBins), occBins)
   wme <- apply(allDist[,emptyBins, drop=F], 2, which.min)
@@ -372,8 +375,8 @@ plotLoessPred <- function(resultMat, nSim=nrow(resultMat),
                      budg1=1, budg2=2, binMeanContrast=3, plotHiCt=F){
   require(hexbin)
   require(grid)
-  lpc <- loessPredCount(resultMat, nSim, xlim=NULL, 
-                        ylim=NULL, budg1=1, budg2=2)
+  lpc <- loessPredCount(resultMat=resultMat, nSim=nSim, xlim=xlim, 
+                        ylim=ylim, budg1=budg1, budg2=budg2)
   bmc <- binMeanContrast
   
   binRange <- diff(range(lpc$binMean))^bmc
