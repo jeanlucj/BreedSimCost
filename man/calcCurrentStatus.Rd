@@ -10,7 +10,8 @@ calcCurrentStatus(bsd)
 \item{bsd}{List of breeding program data}
 }
 \value{
-A vector extracting breeding population means and variances
+A vector extracting breeding population means and variances:
+breedPopMean, breedPopSD, varCandMean
 }
 \description{
 Calculate mean and variance statistics on your current breeding program.

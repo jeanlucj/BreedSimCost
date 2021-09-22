@@ -23,6 +23,6 @@ These percentages have to be valid in terms of following rules
 Call this function to test out a batch of different budgets
 }
 \examples{
-bsd <- runBatch(batchBudg, bsd)
+batchResults <- runBatch(batchBudg, bsd)
 
 }

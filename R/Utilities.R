@@ -261,9 +261,9 @@ calcCurrentStatus <- function(bsd){
   breedPopSD <- sd(gv(currBreedPop))
   
   # Mean of the variety candidates being sent to the marketing department
-  bestVarCand <- chooseTrialEntries(bsd, toTrial="MarketingDept", 
-                                fromTrial=bsd$stageNames[bsd$nStages]){
-  varCandMean <- mean(gv(bsd$varietyCandidates[bestVarCand]))
+  bsd <- chooseTrialEntries(bsd, toTrial="MarketingDept", 
+                                fromTrial=bsd$stageNames[bsd$nStages])
+  varCandMean <- mean(gv(bsd$varietyCandidates[bsd$entries]))
   return(c(breedPopMean=breedPopMean, breedPopSD=breedPopSD, 
            varCandMean=varCandMean))
 }
