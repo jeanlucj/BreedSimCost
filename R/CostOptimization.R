@@ -306,7 +306,7 @@ runWithBudget <- function(percentages, bsd, returnBSD=F){
 #' @details Call this function to test out a batch of different budgets
 #'
 #' @examples
-#' bsd <- runBatch(batchBudg, bsd)
+#' batchResults <- runBatch(batchBudg, bsd)
 #'
 #' @export
 runBatch <- function(batchBudg, bsd){

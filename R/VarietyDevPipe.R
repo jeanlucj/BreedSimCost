@@ -68,7 +68,8 @@ chooseTrialEntries <- function(bsd, toTrial, fromTrial=NULL){
     nIndMax <- min(nInd, bsd$nEntries[1])
     entries <- bsd$varietyCandidates@id[nInd - (nIndMax - 1):0]
   } else{
-    nToSelect <- bsd$nEntries[toTrial]
+    if (toTrial == "MarketingDept") nToSelect <- bsd$nToMarketingDept
+      else nToSelect <- bsd$nEntries[toTrial]
     phenoRecords <- bsd$phenoRecords
     candidates <- phenoRecords %>% pull(id) %>% unique
     if (!is.null(fromTrial)){
@@ -90,6 +91,7 @@ chooseTrialEntries <- function(bsd, toTrial, fromTrial=NULL){
     if (length(candidates) < nToSelect){
       # Workaround for a problem that should only happen in the transition from
       # burnin to two-part: the VDP nEntries between the two are mismatched
+      # Should never happen when toTrial == "MarketingDept"
       print("There are too few variety candidates for trial")
       nCand <- nToSelect - length(candidates)
       stageNum <- which(bsd$stageNames == toTrial) # How many years back parents

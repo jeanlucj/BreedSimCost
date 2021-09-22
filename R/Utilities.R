@@ -261,18 +261,8 @@ calcCurrentStatus <- function(bsd){
   breedPopSD <- sd(gv(currBreedPop))
   
   # Mean of the variety candidates being sent to the marketing department
-  lastStgRec <- bsd$phenoRecords %>%
-    filter(trialType == bsd$stageNames[bsd$nStages]) %>%
-    filter(year == max(year))
-  
-  if(any(is.na(lastStgRec$selCrit))){
-    crit <- pull(lastStgRec, pheno)
-  } else{
-    crit <- pull(lastStgRec, selCrit)
-  }
-  bestVarCand <- pull(lastStgRec, id)[
-    order(crit, decreasing=T)[1:bsd$nToMarketingDept]
-    ]
+  bestVarCand <- chooseTrialEntries(bsd, toTrial="MarketingDept", 
+                                fromTrial=bsd$stageNames[bsd$nStages]){
   varCandMean <- mean(gv(bsd$varietyCandidates[bestVarCand]))
   return(c(breedPopMean=breedPopMean, breedPopSD=breedPopSD, 
            varCandMean=varCandMean))
