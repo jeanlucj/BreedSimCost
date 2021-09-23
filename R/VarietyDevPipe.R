@@ -68,18 +68,12 @@ chooseTrialEntries <- function(bsd, toTrial, fromTrial=NULL){
     nIndMax <- min(nInd, bsd$nEntries[1])
     entries <- bsd$varietyCandidates@id[nInd - (nIndMax - 1):0]
   } else{
-    if (toTrial == "MarketingDept"){
-      nToSelect <- bsd$nToMarketingDept
-      fromYear <- 0
-    } else{
-      nToSelect <- bsd$nEntries[toTrial]
-      fromYear <- -1
-    }
+    nToSelect <- bsd$nEntries[toTrial]
     phenoRecords <- bsd$phenoRecords
     candidates <- phenoRecords %>% pull(id) %>% unique
     if (!is.null(fromTrial)){
       candidates <- phenoRecords %>% 
-        dplyr::filter(trialType == fromTrial & year == bsd$year + fromYear) %>% 
+        dplyr::filter(trialType == fromTrial & year == bsd$year - 1) %>% 
         pull(id) %>% unique
       phenoRecords <- phenoRecords %>% dplyr::filter(id %in% candidates)
     }
@@ -96,7 +90,6 @@ chooseTrialEntries <- function(bsd, toTrial, fromTrial=NULL){
     if (length(candidates) < nToSelect){
       # Workaround for a problem that should only happen in the transition from
       # burnin to two-part: the VDP nEntries between the two are mismatched
-      # Should never happen when toTrial == "MarketingDept"
       print("There are too few variety candidates for trial")
       nCand <- nToSelect - length(candidates)
       stageNum <- which(bsd$stageNames == toTrial) # How many years back parents
@@ -205,10 +198,11 @@ iidPhenoEval <- function(phenoRecords){
   blup <- ranef(fm)[[1]]
   namesBlup <- rownames(blup)
   blup <- unlist(blup)
-  names(blup) <- namesBlup
   # Ensure output has variation: needed for optimal contributions
   if (sd(blup) == 0){
-    blup <- tapply(phenoRecords$pheno, phenoRecords$id, mean)
+    blup <- phenoRecords %>% group_by(id) %>%
+      summarise(wm = weighted.mean(x=pheno, w=wgt)) %>% pull(wm)
   }
+  names(blup) <- namesBlup
   return(blup)
 }
