@@ -68,12 +68,18 @@ chooseTrialEntries <- function(bsd, toTrial, fromTrial=NULL){
     nIndMax <- min(nInd, bsd$nEntries[1])
     entries <- bsd$varietyCandidates@id[nInd - (nIndMax - 1):0]
   } else{
-    nToSelect <- bsd$nEntries[toTrial]
+    if (toTrial == "MarketingDept"){
+      nToSelect <- bsd$nToMarketingDept
+      fromYear <- 0
+    } else{
+      nToSelect <- bsd$nEntries[toTrial]
+      fromYear <- -1
+    }
     phenoRecords <- bsd$phenoRecords
     candidates <- phenoRecords %>% pull(id) %>% unique
     if (!is.null(fromTrial)){
       candidates <- phenoRecords %>% 
-        dplyr::filter(trialType == fromTrial & year == bsd$year - 1) %>% 
+        dplyr::filter(trialType == fromTrial & year == bsd$year + fromYear) %>% 
         pull(id) %>% unique
       phenoRecords <- phenoRecords %>% dplyr::filter(id %in% candidates)
     }
