@@ -300,7 +300,7 @@ loessPredCount <- function(resultMat, nSim=nrow(resultMat),
   uptoResults <- resultMat[1:nSim,]
   # Non-Parametric LOESS response
   predictors <- resultMat %>% colnames %>% stringr::str_subset("perc")
-  predictors <- predictors[-length(predictors)]
+  predictors <- predictors[-length(predictors)] # remove last predictor
   loFormula <- paste0("response ~ ", paste0(predictors, collapse=" + "))
   loFM <- stats::loess(loFormula, data=uptoResults, degree=1)
   loPred <- predict(loFM, se=T)
