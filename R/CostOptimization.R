@@ -323,7 +323,7 @@ runBatch <- function(batchBudg, bsd){
     batchResults <- lapply(batchBudg, runWithBudget, bsd=bsd)
   } else{
     batchResults <- mclapply(batchBudg, runWithBudget, bsd=bsd, 
-                             mc.cores=bsd$nCores)
+                             mc.preschedule = F, mc.cores=bsd$nCores)
   }
   # Remove results where budget was not valid
   batchResults <- batchResults[sapply(batchResults, 
