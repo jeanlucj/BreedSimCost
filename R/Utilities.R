@@ -305,6 +305,10 @@ loessPredCount <- function(resultMat, nSim=nrow(resultMat),
   loFM <- stats::loess(loFormula, data=uptoResults, degree=1)
   loPred <- predict(loFM, se=T)
   
+  # Find budget with highest predicted gain
+  percHiPredGain <- uptoResults %>% dplyr::slice(which.max(loPred$fit)) %>% 
+    dplyr::select(contains("perc"))
+  
   # Make the bins!
   bins <- hexbin::hexbin(cbind(uptoResults[,budg1], uptoResults[,budg2]), 
             xbnds=xlim, ybnds=ylim, 
@@ -329,17 +333,19 @@ loessPredCount <- function(resultMat, nSim=nrow(resultMat),
   }
   binMean <- sapply(1:bins@ncells, calcBinMean)
   
+  highMean <- which.max(binMean)
+  hiMeanXY <- c(bins@xcm[highMean], bins@ycm[highMean])
   highCt <- which.max(bins@count)
   hiCtXY <- c(bins@xcm[highCt], bins@ycm[highCt])
-  bestFit <- which.max(binMean)
-  hiGainXY <- c(bins@xcm[bestFit], bins@ycm[bestFit])
+  highPred <- closeBin[which.max(loPred$fit)]
+  hiPredXY <- c(bins@xcm[highPred], bins@ycm[highPred])
   
-  percMean <- resultMat %>% filter(closeBin == bestFit) %>% 
-    dplyr::select(contains("perc")) %>% summarize_all(mean)
+  percMean <- uptoResults %>% dplyr::filter(closeBin == highMean) %>% 
+    dplyr::select(contains("perc")) %>% dplyr::summarize_all(mean)
 
-  return(list(loPred=loPred, bins=bins, closeBin=closeBin, 
-              binMean=binMean, hiCtXY=hiCtXY, hiGainXY=hiGainXY,
-              percMean=percMean))
+  return(list(loPred=loPred, bins=bins, closeBin=closeBin, binMean=binMean, 
+              hiMeanXY=hiMeanXY, hiCtXY=hiCtXY, hiPredXY=hiPredXY,
+              percMean=percMean, percHiPredGain=percHiPredGain))
 }#END loessPredCount
 
 #' plotLoessPred function
@@ -353,8 +359,9 @@ loessPredCount <- function(resultMat, nSim=nrow(resultMat),
 #' @param budg1 Integer which column of percent budget to make plot for x-axis
 #' @param budg2 Integer which column of percent budget to make plot for y-axis
 #' @param binMeanContrast Numeric a higher value makes the peak stand out more
-#' @param plotHiCt Logical whether to put a green circle 
-#' where the most simulations were run
+#' @param plotHiCt Logical whether to put a green circle where
+#' the most simulations were run
+#' @param plotMn Logical if TRUE, plot mean of gain for bin not bin counts
 #' @return A list with bin counts and means and results from LOESS predictions
 #'
 #' @details Makes a plot
@@ -362,23 +369,29 @@ loessPredCount <- function(resultMat, nSim=nrow(resultMat),
 #' @export
 plotLoessPred <- function(resultMat, nSim=nrow(resultMat), 
                      xlim=NULL, ylim=NULL,
-                     budg1=1, budg2=2, binMeanContrast=3, plotHiCt=F){
+                     budg1=1, budg2=2, binMeanContrast=3, 
+                     plotMn=T, plotHiCt=F, plotHiPredGain=F){
   require(hexbin)
   require(grid)
   lpc <- loessPredCount(resultMat=resultMat, nSim=nSim, xlim=xlim, 
                         ylim=ylim, budg1=budg1, budg2=budg2)
-  bmc <- binMeanContrast
   
-  binRange <- diff(range(lpc$binMean))^bmc
-  meanAsCount <- round(99*(lpc$binMean - min(lpc$binMean))^bmc / binRange) + 1
-  nSim <- lpc$bins@n
-  lpc$bins@count <- meanAsCount
   main <- paste0(nSim, " Sims. Range: ", paste(round(range(lpc$binMean), 1), collapse=" to "))
-  
-  p <- hexbin::plot(lpc$bins, main=main, legend=FALSE)
+  if (plotMn){
+    bmc <- binMeanContrast
+    binRange <- diff(range(lpc$binMean))^bmc
+    meanAsCount <- round(99*(lpc$binMean - min(lpc$binMean))^bmc / binRange) + 1
+    lpc$bins@count <- meanAsCount
+  }
+  p <- hexbin::plot(lpc$bins, main=main, legend=!plotMn)
   pushHexport(p$plot.vp)
-  if (plotHiCt) grid::grid.points(lpc$hiCtXY[1], lpc$hiCtXY[2], gp=gpar(col=3))
-  grid::grid.points(lpc$hiGainXY[1], lpc$hiGainXY[2], gp=gpar(col="red"))
+  grid::grid.points(lpc$hiMeanXY[1], lpc$hiMeanXY[2], gp=gpar(col="red"))
+  if (plotHiCt){
+    grid::grid.points(lpc$hiCtXY[1], lpc$hiCtXY[2], gp=gpar(col="green"))
+  }
+  if (plotHiPredGain){
+    grid::grid.points(lpc$hiPredXY[1], lpc$hiPredXY[2], gp=gpar(col="blue"))
+  }
   upViewport()
   return(lpc)
 }#END plotLoessPred

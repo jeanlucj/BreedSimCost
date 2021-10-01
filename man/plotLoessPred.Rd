@@ -12,7 +12,9 @@ plotLoessPred(
   budg1 = 1,
   budg2 = 2,
   binMeanContrast = 3,
-  plotHiCt = F
+  plotMn = T,
+  plotHiCt = F,
+  plotHiPredGain = F
 )
 }
 \arguments{
@@ -30,8 +32,10 @@ plotLoessPred(
 
 \item{binMeanContrast}{Numeric a higher value makes the peak stand out more}
 
-\item{plotHiCt}{Logical whether to put a green circle 
-where the most simulations were run}
+\item{plotMn}{Logical if TRUE, plot mean of gain for bin not bin counts}
+
+\item{plotHiCt}{Logical whether to put a green circle where
+the most simulations were run}
 }
 \value{
 A list with bin counts and means and results from LOESS predictions
