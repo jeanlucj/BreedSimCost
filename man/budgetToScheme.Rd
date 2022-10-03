@@ -30,6 +30,6 @@ Call this function after running specifyCosts.
 Assume stages of CET, PYT, UYT, so percentRanges needs 4 rows
 The first stage needs more budget because of genotyping and development costs
 percentages <- c(0.50, 0.30, 0.10, 0.10)
-bsd <- budgetToScheme(bsd, percentages=percentages)
+bsd <- budgetToScheme(percentages=percentages, bsd)
 
 }

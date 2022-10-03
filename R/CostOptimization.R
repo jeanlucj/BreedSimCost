@@ -96,7 +96,7 @@ calcBudget <- function(bsd){
 #' Assume stages of CET, PYT, UYT, so percentRanges needs 4 rows
 #' The first stage needs more budget because of genotyping and development costs
 #' percentages <- c(0.50, 0.30, 0.10, 0.10)
-#' bsd <- budgetToScheme(bsd, percentages=percentages)
+#' bsd <- budgetToScheme(percentages=percentages, bsd)
 #'
 #' @export
 budgetToScheme <- function(percentages, bsd){
@@ -206,10 +206,12 @@ budgetToScheme <- function(percentages, bsd){
 #' bsd <- makeGrid(bsd)
 #'
 #' @export
-makeGrid <- function(bsd){
-  percList <- as.list(seq(from=bsd$minPercentage[1], to=bsd$maxPercentage[1], 
-                 by=bsd$percentageStep[1]), ncol=1)
-  for (stage in 1+1:bsd$nStages){
+makeGrid <- function(bsd, justVDP=F){
+  if (justVDP) strt <- 2 else strt <- 1
+  percList <- as.list(seq(from=bsd$minPercentage[strt], 
+                          to=bsd$maxPercentage[strt],
+                          by=bsd$percentageStep[strt]), ncol=1)
+  for (stage in setdiff(1+1:bsd$nStages, strt)){ # if justVDP don't do strt again
     newPerc <- seq(from=bsd$minPercentage[stage], to=bsd$maxPercentage[stage], 
                    by=bsd$percentageStep[stage])
     percList <- mapply(c, rep(percList, each=length(newPerc)), 
@@ -219,7 +221,7 @@ makeGrid <- function(bsd){
   budgets <- lapply(percList, function(v) return(v / sum(v)))
   
   return(budgets)
-}#END gridSearch
+}#END makeGrid
 
 #' runWithBudget function
 #'
@@ -261,7 +263,7 @@ runWithBudget <- function(percentages, bsd, returnBSD=F){
     return(c(percentages, NA))
   }
   
-  startValues <- calcCurrentStatus(bsd)
+  popParmsByCyc <- calcCurrentStatus(bsd)
   
   for (twoPart in 1:bsd$nCyclesToRun){
     bsd$year <- bsd$year+1
@@ -279,16 +281,19 @@ runWithBudget <- function(percentages, bsd, returnBSD=F){
       optCont <- selectParents(bsd)
       bsd <- makeCrosses(bsd, optCont)
     }
+    
+    popParmsByCyc <- popParmsByCyc %>% bind_rows(calcCurrentStatus(bsd))
   }
-  
-  endValues <- calcCurrentStatus(bsd)
-  
+
   if (bsd$verbose) print(Sys.time() - s)
   if (bsd$debug) on.exit()
   if (returnBSD){
     return(bsd)
   } else{
-    return(c(percentages, startValues, endValues, bsd$realizedBudget["budget"]))
+    totalGain <- (popParmsByCyc %>% slice_tail(n=1))$varCandMean -
+      (popParmsByCyc %>% slice_head(n=1))$breedPopMean
+    return(list(gainBudgetPerc=c(totalGain=totalGain, budget=bsd$realizedBudget["budget"], percentages), 
+                popParmsByCyc=popParmsByCyc))
   }
 }#END runWithBudget
 
@@ -325,21 +330,14 @@ runBatch <- function(batchBudg, bsd){
     batchResults <- mclapply(batchBudg, runWithBudget, bsd=bsd, 
                              mc.preschedule = F, mc.cores=bsd$nCores)
   }
+  # batchResults is now a list of lists
   # Remove results where budget was not valid
+  findBatchNA <- function(oneRunRes){
+    !any(is.na(unlist(oneRunRes)))
+  }
   batchResults <- batchResults[sapply(batchResults, 
-                                      function(v) !any(is.na(v)))]
-  rowNum <- length(batchResults[[1]])
-  batchResults <- batchResults %>% unlist %>% matrix(nrow=rowNum) %>% t
-  invisible(capture.output(
-    batchResults <- as_tibble(batchResults, .name_repair="universal")
-  ))
-  # WARNING names here are hardcoded based on calcCurrentStatus
-  colnames(batchResults) <- c(paste0("perc_", c("PIC", bsd$stageNames)),
-                              paste0("init", c("PopMean", "PopSD", "VarMean")),
-                              paste0("end", c("PopMean", "PopSD", "VarMean")), 
-                              "Budget")
-  batchResults <- batchResults %>% dplyr::mutate(response = endVarMean - initPopMean)
-  
+                                      function(v) findBatchNA(v))]
+
   if (bsd$debug) on.exit()
   return(batchResults)
 }#END runBatch

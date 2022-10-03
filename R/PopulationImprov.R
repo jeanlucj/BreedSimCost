@@ -212,7 +212,7 @@ grmPhenoEval <- function(bsd){
     dplyr::mutate(wgt=1/errVar)
   phenoDF$id <- factor(phenoDF$id, levels=rownames(grm)) # Enable prediction
   fm <- sommer::mmer(pheno ~ 1,
-             random= ~ vs(id, Gu=grm),
+             random= ~ vsr(id, Gu=grm),
              method="EMMA",
              rcov= ~ units,
              weights=wgt,

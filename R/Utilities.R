@@ -66,16 +66,16 @@ initializeProgram <- function(founderFile, schemeFile,
   
   # Create haplotypes for founder population of outbred individuals
   if (bsd$quickHaplo){
-    founderHap <- quickHaplo(nInd=bsd$nBreedingProg, 
+    founderHap <- AlphaSimR::quickHaplo(nInd=bsd$nBreedingProg, 
                              nChr=bsd$nChr, segSites=bsd$segSites)
   } else{
-    founderHap <- runMacs2(nInd=bsd$nBreedingProg, 
+    founderHap <- AlphaSimR::runMacs2(nInd=bsd$nBreedingProg, 
                            nChr=bsd$nChr, segSites=bsd$segSites, 
                            Ne=bsd$effPopSize)
   }
   
   # Global simulation parameters from founder haplotypes
-  bsd$SP <- SimParam$new(founderHap)
+  bsd$SP <- AlphaSimR::SimParam$new(founderHap)
   bsd$SP$restrSegSites(minQtlPerChr=1, minSnpPerChr=10, overlap=FALSE)
   # Additive, dominance, and epistatic trait architecture
   bsd$SP$addTraitADE(nQtlPerChr=bsd$nQTL, var=bsd$genVar, meanDD=bsd$meanDD, varDD=bsd$varDD, relAA=bsd$relAA, useVarA=FALSE)
@@ -259,13 +259,14 @@ calcCurrentStatus <- function(bsd){
   currBreedPop <- bsd$breedingPop[nInd - (bsd$nBreedingProg - 1):0]
   breedPopMean <- mean(gv(currBreedPop))
   breedPopSD <- sd(gv(currBreedPop))
+  breedPopAddSD <- sd(bv(currBreedPop, simParam=bsd$SP))
   
   # Mean of the variety candidates being sent to the marketing department
   bsd <- chooseTrialEntries(bsd, toTrial="MarketingDept", 
                                 fromTrial=bsd$stageNames[bsd$nStages])
   varCandMean <- mean(gv(bsd$varietyCandidates[bsd$entries]))
-  return(c(breedPopMean=breedPopMean, breedPopSD=breedPopSD, 
-           varCandMean=varCandMean))
+  return(tibble(breedPopMean=breedPopMean, breedPopSD=breedPopSD, 
+           breedPopAddSD=breedPopAddSD, varCandMean=varCandMean))
 }
 
 #' loessPredCount function
@@ -279,6 +280,7 @@ calcCurrentStatus <- function(bsd){
 #' @param ylim Real max and min for plot
 #' @param budg1 Integer which column of percent budget to make plot for x-axis
 #' @param budg2 Integer which column of percent budget to make plot for y-axis
+#' @param degree Interger the degree of the polynomial LOESS fits
 #' @return A list with bin counts and means and results from LOESS predictions
 #'
 #' @details Use the hexbin function to tabulate 2D bins in hexagonal array
@@ -286,7 +288,7 @@ calcCurrentStatus <- function(bsd){
 #' @export
 loessPredCount <- function(resultMat, nSim=nrow(resultMat), 
                       xlim=NULL, ylim=NULL, 
-                      budg1=1, budg2=2){
+                      budg1=1, budg2=2, degree=1){
   require(hexbin)
   if (is.null(xlim)){
     xlim <- c(floor(min(resultMat[,budg1])*50-0.5)/50, 
@@ -302,7 +304,7 @@ loessPredCount <- function(resultMat, nSim=nrow(resultMat),
   predictors <- resultMat %>% colnames %>% stringr::str_subset("perc")
   predictors <- predictors[-length(predictors)] # remove last predictor
   loFormula <- paste0("response ~ ", paste0(predictors, collapse=" + "))
-  loFM <- stats::loess(loFormula, data=uptoResults, degree=1)
+  loFM <- stats::loess(loFormula, data=uptoResults, degree=degree)
   loPred <- predict(loFM, se=T)
   
   # Find budget with highest predicted gain
@@ -359,9 +361,14 @@ loessPredCount <- function(resultMat, nSim=nrow(resultMat),
 #' @param budg1 Integer which column of percent budget to make plot for x-axis
 #' @param budg2 Integer which column of percent budget to make plot for y-axis
 #' @param binMeanContrast Numeric a higher value makes the peak stand out more
+#' @param plotMn Logical if TRUE, plot mean of gain for bin not bin counts
+#' @param plotHiMn Logical whether to put a red circle at the hexbin with the
+#' highest mean
 #' @param plotHiCt Logical whether to put a green circle where
 #' the most simulations were run
-#' @param plotMn Logical if TRUE, plot mean of gain for bin not bin counts
+#' @param plotHiPredGain Logical whether to put a blue circle where on the point
+#' with the highest LOESS predicted gain
+#' @param giveRange Logical whether to put the range of gains in the main title
 #' @return A list with bin counts and means and results from LOESS predictions
 #'
 #' @details Makes a plot
@@ -370,27 +377,36 @@ loessPredCount <- function(resultMat, nSim=nrow(resultMat),
 plotLoessPred <- function(resultMat, nSim=nrow(resultMat), 
                      xlim=NULL, ylim=NULL,
                      budg1=1, budg2=2, binMeanContrast=3, 
-                     plotMn=T, plotHiCt=F, plotHiPredGain=F){
+                     plotMn=T, plotHiMn=T, plotHiCt=F, plotHiPredGain=F,
+                     giveRange=T){
   require(hexbin)
   require(grid)
   lpc <- loessPredCount(resultMat=resultMat, nSim=nSim, xlim=xlim, 
                         ylim=ylim, budg1=budg1, budg2=budg2)
   
-  main <- paste0(nSim, " Sims. Range: ", paste(round(range(lpc$binMean), 1), collapse=" to "))
+  rangeTitle <- " Simulations"
+  if (giveRange) rangeTitle <- paste0(" Sims. Range: ", paste(round(range(lpc$binMean), 1), collapse=" to "))
+  prefTitle <- paste0(rep(" ", 4 - ceiling(log10(nSim))), collapse="")
+  main <- paste0(prefTitle, nSim, rangeTitle)
   if (plotMn){
     bmc <- binMeanContrast
     binRange <- diff(range(lpc$binMean))^bmc
     meanAsCount <- round(99*(lpc$binMean - min(lpc$binMean))^bmc / binRange) + 1
     lpc$bins@count <- meanAsCount
   }
-  p <- hexbin::plot(lpc$bins, main=main, legend=!plotMn)
+  p <- hexbin::gplot.hexbin(lpc$bins, main=main, legend=ifelse(plotMn, 0, 1))
   pushHexport(p$plot.vp)
-  grid::grid.points(lpc$hiMeanXY[1], lpc$hiMeanXY[2], gp=gpar(col="red"))
+  if (plotHiMn){
+    grid::grid.points(lpc$hiMeanXY[1], lpc$hiMeanXY[2], gp=gpar(col="red"), 
+                      pch=16)
+  }
   if (plotHiCt){
-    grid::grid.points(lpc$hiCtXY[1], lpc$hiCtXY[2], gp=gpar(col="green"))
+    grid::grid.points(lpc$hiCtXY[1], lpc$hiCtXY[2], gp=gpar(col="green"), 
+                      pch=16)
   }
   if (plotHiPredGain){
-    grid::grid.points(lpc$hiPredXY[1], lpc$hiPredXY[2], gp=gpar(col="blue"))
+    grid::grid.points(lpc$hiPredXY[1], lpc$hiPredXY[2], gp=gpar(col="blue"), 
+                      pch=16)
   }
   upViewport()
   return(lpc)

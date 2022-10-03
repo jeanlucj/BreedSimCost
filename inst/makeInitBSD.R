@@ -1,3 +1,4 @@
+library(BreedSimCost)
 bsd <- initializeProgram(
   "./inst/FounderCtrlFile.txt",
   "./inst/SchemeCtrlFile.txt",

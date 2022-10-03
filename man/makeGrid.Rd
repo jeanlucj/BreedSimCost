@@ -4,7 +4,7 @@
 \alias{makeGrid}
 \title{makeGrid function}
 \usage{
-makeGrid(bsd)
+makeGrid(bsd, justVDP = F)
 }
 \arguments{
 \item{bsd}{List of breeding scheme data}

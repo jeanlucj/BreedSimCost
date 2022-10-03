@@ -25,16 +25,16 @@ runVDPtrial <- function(bsd, trialType){
   impliedVarE <- bsd$gxlVar/nL + bsd$gxyVar + bsd$gxyxlVar/nL + eV/nL/nR
   # Phenotypic evaluation of experimental lines
   pheno <- AlphaSimR::setPheno(bsd$varietyCandidates[entries],
-                                  varE=impliedVarE, simParam=bsd$SP)
+                               varE=impliedVarE, simParam=bsd$SP)
   # Add the information to phenoRecords
   newRec <- tibble(year=bsd$year, trialID=bsd$nextTrialID, trialType=trialType,
                    id=pheno@id, pheno=pheno@pheno, selCrit=NA,
                    errVar=impliedVarE)
   bsd$phenoRecords <- bsd$phenoRecords %>% bind_rows(newRec)
-
+  
   # Manage the trialID number
   bsd$nextTrialID <- bsd$nextTrialID + 1
-
+  
   return(bsd)
 }
 
@@ -108,7 +108,7 @@ chooseTrialEntries <- function(bsd, toTrial, fromTrial=NULL){
       bsd <- makeVarietyCandidates(bsd, breedPopIDs, nCand) 
       nVarInd <- AlphaSimR::nInd(bsd$varietyCandidates)
       entries <- c(candidates, 
-                      bsd$varietyCandidates@id[nVarInd - (nCand - 1):0])
+                   bsd$varietyCandidates@id[nVarInd - (nCand - 1):0])
     } else{
       crit <- crit[candidates]
       entries <- crit[(crit %>% order(decreasing=T))[1:nToSelect]] %>% names
@@ -170,7 +170,7 @@ makeVarietyCandidates <- function(bsd, breedPopIDs=NULL, nCandidates=NULL){
              }
            }
          }#END inbred
-         )#END switch
+  )#END switch
   
   # Update varietyCandidates population
   if (exists("varietyCandidates", bsd)){
@@ -211,4 +211,244 @@ iidPhenoEval <- function(phenoRecords){
   }
   names(blup) <- namesBlup
   return(blup)
+}
+
+#' calcVDPcovMat function
+#' 
+#' @param bsd List of breeding program data
+#'
+#' @return Covariance matrix of the true genotypic values of the variety
+#' candidates with the phenotypic means from the VDP stages
+#' 
+#' @details This function came essentially from the selectiongain package 
+#' developed by Melchinger's group: Mi et al. 2014 Crop Science. 
+#' Simplified just to the "LonginII" method.
+#'
+#' @examples
+#' vdpCovMat <- calcVDPcovMat(bsd)
+#' 
+#' @export
+calcVDPcovMat <- function(bsd){
+  dim = bsd$nStages + 1
+  Vg <- bsd$genVar
+  Vgy <- bsd$gxyVar
+  Vgl <- bsd$gxlVar
+  Vgyl <- bsd$gxyxlVar
+  Ve <- bsd$errVars
+  covMat <- diag(dim)*Vg
+  covMat[1,] <- Vg
+  covMat[,1] <- Vg
+  for (i in 2:dim){
+    covMat[i,i] <- Vg + Vgy +
+      (Vgl+Vgyl)/bsd$nLocs[i-1] +
+      Ve[i-1]/bsd$nLocs[i-1]/bsd$nReps[i-1]
+  }
+  for (i in 2:(dim-1)){
+    for (j in (i+1):dim){
+      covMat[i,j] <- Vg +
+        Vgl/max(bsd$nLocs[i-1], bsd$nLocs[j-1])
+      covMat[j,i] <- covMat[i,j]
+    }
+  }
+  
+  return(covMat)
+}
+
+#' multistageTrucPt function
+#' 
+#' @param alpha vector the selected fractions from one VDP stage to the next
+#' @param corr matrix the correlation matrix from calcVDPcovMat
+#' @param alg function the truncation point calculation algorithm from
+#' package mvtnorm. Options are Miwa() and GenzBretz(). The latter is slower
+#'
+#' @return Covariance matrix of the true genotypic values of the variety
+#' candidates with the phenotypic means from the VDP stages
+#' 
+#' @details This function came essentially from the selectiongain package 
+#' developed by Melchinger's group: Mi et al. 2014 Crop Science. 
+#' Simplified just to the "LonginII" method.
+#'
+#' @examples
+#' vdpCovMat <- calcVDPcovMat(bsd)
+#' 
+#' @export
+multistageTruncPt <- function(alpha,  corr=NA){
+  if (any(is.na(corr))) stop("The corr matrix must not be NA")
+  
+  if (nrow(corr) == length(alpha)+1){
+    corr <- corr[-1,-1]
+  }
+  else{
+    stop ("The dimension of corr matrix must be one more than the length alpha")
+  }
+  
+  nStg=length(alpha)
+  alpha[alpha == 1] <- 0.9999
+  
+  lower <- rep(-Inf, nStg)
+  for (stage in 1:nStg){
+    truncPt <- tmvtnorm::qtmvnorm.marginal(p=1-alpha[stage], interval=c(-5,5), 
+                                           n=stage, tail="lower.tail", 
+                                           sigma=corr, lower=lower)
+    lower[stage] <- truncPt$root
+  }
+
+  return(lower)
+}
+
+#' multistageGain function
+#' 
+#' @param corr matrix the correlation matrix from calcVDPcovMat
+#' @param truncPts vector the truncation points that came from multistageTruncPt
+#' @param Vg numeric the genotypic variance to provide a scale
+#' 
+#' @return numeric the expected gain from selection
+#' 
+#' @details This function came essentially from the selectiongain package 
+#' but then I simplified it very much by just using a current R package
+#'
+#' @examples
+#' vdpCovMat <- multistageGain(corr, truncPts)
+#' 
+#' @export
+# mutistagecor.R author: xuefei mi, 11-03-2013, for selectiongain package v2.0.2
+multistageGain <- function(corr, truncPts, Vg=1){
+  require(tmvtnorm)
+  # check if truncPts and corr have corresponding dimensions
+  if (length(truncPts)!=nrow(corr)-1){
+    stop("Dimension of truncPts must be same as nrow(corr)-1")
+  }
+  meanGenVal <- tmvtnorm::mtmvnorm(sigma=corr, lower=c(-Inf, truncPts))$tmean[1]
+  return(meanGenVal*sqrt(Vg))
+}
+
+# Order of operations
+# 0. From the full optimization, get the VDP budget
+# 0.1 Calculate the implied covariance matrix in the VDP: calcVDPcovMat
+# 1. With the VDP budget, calculate the min max entries: calcMinMaxEntries
+# 2. With the min max entries, make the grid: makeNEntryGrid
+# 3. Calculate the gains across the grid: calcVDPgain
+# 4. Determine if the max is balanced more toward the end than the full two-part
+
+#' makeNEntryGrid function
+#'
+#' @param nIndMin nStages vector minimum number of individuals at each stage
+#' @param nIndMax nStages vector maximum number of individuals at each stage
+#' @param step nStages vector: interval of number of individuals. If NULL will
+#' increment for last stage and have the same number of steps for other stages
+#' @param maxBudget the maximum cost of all evaluations
+#' @param costProd per individual, how much does it cost to produce the seed?
+#' @param costTest per individual, how much does it cost to run all the plots?
+#'
+#' @return List with feasible entry number schemes
+#'
+#' @details Call this function to set up optimization
+#'
+#' @examples
+#' bsd <- makeNEntryGrid(bsd)
+#'
+#' @export
+makeNEntryGrid <- function(nIndMin, nIndMax, step=NULL, 
+                           minBudget=0.9*maxBudget, maxBudget, indCost){
+  nStages <- length(nIndMin)
+  if (is.null(step)){
+    nSteps <- nIndMax[nStages] - nIndMin[nStages]
+    step <- (nIndMax - nIndMin) / nSteps
+  }
+  nEntryList <- as.list(seq(from=nIndMin[1], to=nIndMax[1], by=step[1]) %>% round)
+  for (stg in 2:nStages){
+    nEntryNew <- seq(from=nIndMin[stg], to=nIndMax[stg], by=step[stg]) %>% round
+    nEntryList <- mapply(c, rep(nEntryList, each=length(nEntryNew)),
+                         rep(nEntryNew, length(nEntryList)), SIMPLIFY=F)
+  }
+  
+  # Make sure that nEntries gets smaller going forward
+  nIndDecreases <- function(nEntryVec){
+    all(diff(nEntryVec) <= 0)
+  }
+  nEntryList <- nEntryList[sapply(nEntryList, nIndDecreases)]
+  
+  # Calculate budgets to eliminate ones that are too small or too big
+  calcBudget <- function(nEntryVec, indCost){
+    return(nEntryVec %*% indCost)
+  }
+  budgets <- sapply(nEntryList, calcBudget, indCost=indCost)
+  
+  return(nEntryList[budgets > minBudget & budgets < maxBudget])
+}#END makeNEntryGrid
+
+#' calcVDPGain function
+#'
+#' @param nEntryVec nStages vector with number of individuals at each stage
+#' @param nFinal numeric how many individuals are going to the marketing dept
+#' @param cov matrix covariances as came out of calcVDPcovMat
+#'
+#' @return numeric expected gain from the VDP
+#'
+#' @details Call this function on a grid of budget equal VDPs. Wrapper function 
+#' to call the truncation point and gain functions with elements from the grid
+#'
+#' @examples
+#' gains <- sapply(testGrid, calcVDPGain, 
+#'                 nFinal=bsd$nToMarketingDept, cov=vdpCovMat)
+#'
+#' @export
+calcVDPGain <- function(nEntryVec, nFinal, cov){
+  nEntryVec <- c(nEntryVec, nFinal)
+  genVar <- cov[1, 1]
+  corr <- cov2cor(cov)
+  selFrac <- nEntryVec[-1] / nEntryVec[-length(nEntryVec)]
+  truncPts <- multistageTruncPt(selFrac, corr)
+  return(multistageGain(corr=corr, truncPts=truncPts, Vg=genVar))
+}
+
+#' calcMinMaxEntries function
+#'
+#' @param bsd List of breeding program data
+#' @param budgetVec vector as comes out of calcBudget. If NULL look in bsd
+#' @param includePIC logical should a min and max for nProg in PIC be figured?
+#'
+#' @return List with vectors for minimum entries and maximum entries and cost
+#' per individual entry
+#'
+#' @details Assume the location costs are fixed. 
+#'
+#' @examples
+#' minMaxList <- calcMinMaxEntries(bsd)
+#'
+#' @export
+calcMinMaxEntries <- function(bsd, budgetVec=NULL, includePIC=F){
+  if (is.null(budgetVec)){
+    if (exists("realizedBudget", bsd)){
+      budgetVec <- bsd$realizedBudget
+    }
+    else{
+      budgetVec <- bsd$initBudget
+    }
+  }
+  indCost <- bsd$plotCosts * bsd$nReps * bsd$nLocs + bsd$qcGenoCost
+  indCost[1] <- indCost[1] + 
+    bsd$candidateDevelCost + bsd$wholeGenomeCost
+  varBudget <- budgetVec["budget"] - budgetVec["locationCosts"]
+  if (includePIC){
+    costPerPIC <- bsd$nPopImpCycPerYear * 
+      (bsd$crossingCost + bsd$wholeGenomeCost)
+    indCost <- c(costPerPIC, indCost)
+  }
+  else{
+    varBudget <- varBudget - budgetVec["picBudget"]
+  }
+  
+  minLast <- bsd$nToMarketingDept
+  minEntries <- rep(minLast, length(indCost))
+  minStgCosts <- indCost * minEntries
+  maxEntries <- NULL
+  for (stg in 1:length(indCost)){
+    costRest <- sum(minStgCosts[-(1:stg)])
+    perEntToStg <- sum(indCost[1:stg])
+    maxEntries <- c(maxEntries, floor((varBudget - costRest)/perEntToStg))
+  }
+  minEntries[1] <- maxEntries[stg]
+  return(list(minEntries=minEntries, maxEntries=maxEntries, 
+              indCost=indCost, varBudget=varBudget))
 }

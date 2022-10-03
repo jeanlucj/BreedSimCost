@@ -10,7 +10,8 @@ loessPredCount(
   xlim = NULL,
   ylim = NULL,
   budg1 = 1,
-  budg2 = 2
+  budg2 = 2,
+  degree = 1
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ loessPredCount(
 \item{budg1}{Integer which column of percent budget to make plot for x-axis}
 
 \item{budg2}{Integer which column of percent budget to make plot for y-axis}
+
+\item{degree}{Interger the degree of the polynomial LOESS fits}
 }
 \value{
 A list with bin counts and means and results from LOESS predictions
