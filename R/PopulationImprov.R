@@ -211,6 +211,7 @@ grmPhenoEval <- function(bsd){
   phenoDF <- phenoDF %>% filter(id %in% rownames(grm)) %>% 
     dplyr::mutate(wgt=1/errVar)
   phenoDF$id <- factor(phenoDF$id, levels=rownames(grm)) # Enable prediction
+  phenoDF <- data.frame(phenoDF) # Doesn't work when phenoDF a tibble
   fm <- sommer::mmer(pheno ~ 1,
              random= ~ vsr(id, Gu=grm),
              method="EMMA",
