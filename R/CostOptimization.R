@@ -416,6 +416,7 @@ findRedoBudgets <- function(bsd){
 #' @examples
 #' 
 #' @export
+#' I'm actually going to remove this
 optimizeByLOESS <- function(bsd){
   if (bsd$debug){
     require(here)
