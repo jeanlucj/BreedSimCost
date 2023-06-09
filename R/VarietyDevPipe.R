@@ -124,7 +124,12 @@ chooseTrialEntries <- function(bsd, toTrial, fromTrial=NULL){
 #' @param bsd List of breeding program data
 #' @param breedPopIDs String vector IDs of breeding pop progenitors
 #' of the variety candidates.  If NULL, the last nBreedingProg individuals used
-#' @param nCandidates Make bespoke number of candidates if needed on the fly
+#' @param nCandidates Make this number of candidates. If NULL, defaults to the
+#' number of individuals in the first stage of the VDP.
+#' If more individuals come out of the PIC than are needed in the first stage of
+#' the VDP, then requisite individuals are chosen at random.  If fewer
+#' individuals come out of the PIC than are needed, then individuals from past
+#' generations of the PIC are chosen.
 #'
 #' @return Updated bsd with new variety candidates in bsd$varietyCandidates
 #' @details Here, creates DHs evenly distributed among the breeding progeny
@@ -229,22 +234,22 @@ iidPhenoEval <- function(phenoRecords){
 #' 
 #' @export
 calcVDPcovMat <- function(bsd){
-  dim = bsd$nStages + 1
+  nS1 = bsd$nStages + 1
   Vg <- bsd$genVar
   Vgy <- bsd$gxyVar
   Vgl <- bsd$gxlVar
   Vgyl <- bsd$gxyxlVar
   Ve <- bsd$errVars
-  covMat <- diag(dim)*Vg
+  covMat <- diag(nS1)*Vg
   covMat[1,] <- Vg
   covMat[,1] <- Vg
-  for (i in 2:dim){
+  for (i in 2:nS1){
     covMat[i,i] <- Vg + Vgy +
       (Vgl+Vgyl)/bsd$nLocs[i-1] +
       Ve[i-1]/bsd$nLocs[i-1]/bsd$nReps[i-1]
   }
-  for (i in 2:(dim-1)){
-    for (j in (i+1):dim){
+  for (i in 2:(nS1-1)){
+    for (j in (i+1):nS1){
       covMat[i,j] <- Vg +
         Vgl/max(bsd$nLocs[i-1], bsd$nLocs[j-1])
       covMat[j,i] <- covMat[i,j]
@@ -261,15 +266,14 @@ calcVDPcovMat <- function(bsd){
 #' @param alg function the truncation point calculation algorithm from
 #' package mvtnorm. Options are Miwa() and GenzBretz(). The latter is slower
 #'
-#' @return Covariance matrix of the true genotypic values of the variety
-#' candidates with the phenotypic means from the VDP stages
+#' @return Truncation points consistent with the vector of selected fractions
 #' 
-#' @details This function came essentially from the selectiongain package 
-#' developed by Melchinger's group: Mi et al. 2014 Crop Science. 
-#' Simplified just to the "LonginII" method.
+#' @details This function came from the selectiongain package (Mi et al. 2014
+#'   Crop Science) but uses the newer tmvtnorm package
 #'
 #' @examples
-#' vdpCovMat <- calcVDPcovMat(bsd)
+#' corMat <- cov2cor(vdpCovMat)
+#' truncPts <- multistageTruncPt(alpha=alpha, corr=corMat)
 #' 
 #' @export
 multistageTruncPt <- function(alpha,  corr=NA){
@@ -283,7 +287,7 @@ multistageTruncPt <- function(alpha,  corr=NA){
   }
   
   nStg=length(alpha)
-  alpha[alpha == 1] <- 0.9999
+  alpha[alpha == 1] <- 0.9999 # Error thrown if fraction selected == 1
   
   lower <- rep(-Inf, nStg)
   for (stage in 1:nStg){
@@ -305,13 +309,15 @@ multistageTruncPt <- function(alpha,  corr=NA){
 #' @return numeric the expected gain from selection
 #' 
 #' @details This function came essentially from the selectiongain package 
-#' but then I simplified it very much by just using a current R package
+#' but then I simplified it very much by using a current R package, tmvtnorm
 #'
 #' @examples
-#' vdpCovMat <- multistageGain(corr, truncPts)
-#' 
+#' vdpCovMat <- calcVDPcovMat(bsd)
+#' corMat <- cov2cor(vdpCovMat)
+#' truncPts <- multistageTruncPt(alpha=alpha, corr=corMat)
+#' gain <- multistageGain(corMat, truncPts)
+#'  
 #' @export
-# mutistagecor.R author: xuefei mi, 11-03-2013, for selectiongain package v2.0.2
 multistageGain <- function(corr, truncPts, Vg=1){
   require(tmvtnorm)
   # check if truncPts and corr have corresponding dimensions
@@ -451,4 +457,60 @@ calcMinMaxEntries <- function(bsd, budgetVec=NULL, includePIC=F){
   minEntries[1] <- maxEntries[stg]
   return(list(minEntries=minEntries, maxEntries=maxEntries, 
               indCost=indCost, varBudget=varBudget))
+}
+
+#' calcMultivarVDPcovMat function
+#' 
+#' @param bsd List of breeding program data
+#' The following objects should be in bsd:
+#' @param nStages The number of stages in the variety development pipeline (VDP)
+#' @param nTraits The number of traits being selected upon
+#' @param genVar A nTraits x nTraits genetic covariance matrix
+#' @param gxyVar Same dimension genotype x year covariance matrix
+#' @param gxlVar Same dimension genotype x location covariance matrix
+#' @param gxyxlVar Same dimension genotype x year x location covariance matrix
+#' @param errVars A list, nStages long, each element being the nTraits x nTraits
+#'   error covariance matrix of that stage in the VDP
+#' @param whichTwhen A list, nStages long, each element being an integer vector
+#'   of which traits are being selected upon during that stage
+#' @return Covariance matrix of the true genotypic values of the variety
+#' candidates with the phenotypic means from the VDP stages
+#' 
+#' @details This function is a multivariate extension from the selectiongain
+#'   package (Mi et al. 2014 Crop Science) of the "LonginII" method.
+#'
+#' @examples
+#' vdpCovMat <- calcMultivarVDPcovMat(bsd)
+#' 
+#' @export
+calcMultivarVDPcovMat <- function(bsd){
+  # Assume that all Var matrices are multivariate d x d, and d=number of traits
+  nS1 <- bsd$nStages + 1
+  nT <- bsd$nTraits
+  Vg <- bsd$genVar
+  Vgy <- bsd$gxyVar
+  Vgl <- bsd$gxlVar
+  Vgyl <- bsd$gxyxlVar
+  Ve <- bsd$errVars
+  covMat <- kronecker(diag(nS1), Vg)
+  covMat[1:nT,] <- kronecker(matrix(1, ncol=nS1), Vg)
+  covMat[,1:nT] <- kronecker(matrix(1, nrow=nS1), Vg)
+  for (i in 1:bsd$nStages){
+    covMat[i*nT+1:nT,i*nT+1:nT] <- Vg + Vgy +
+      (Vgl+Vgyl)/bsd$nLocs[i] +
+      Ve[[i]]/bsd$nLocs[i]/bsd$nReps[i]
+  }
+  for (i in 1:(bsd$nStages-1)){
+    for (j in (i+1):bsd$nStages){
+      covMat[i*nT+1:nT,j*nT+1:nT] <- Vg +
+        Vgl/max(bsd$nLocs[i], bsd$nLocs[j])
+      covMat[j*nT+1:nT,i*nT+1:nT] <- 
+        t(covMat[i*nT+1:nT,j*nT+1:nT])
+    }
+  }
+  keep <- 1:nT
+  for (i in 1:bsd$nStages){
+    keep <- c(keep, i*nT+bsd$whichTwhen[[i]])
+  }
+  return(covMat[keep, keep])
 }

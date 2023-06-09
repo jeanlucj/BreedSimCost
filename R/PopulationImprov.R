@@ -19,9 +19,13 @@ selectParents <- function(bsd){
   gebv <- grmPhenoEval(bsd)
   # Keep only breeding population
   nInd <- nInd(bsd$breedingPop)
-  nIndMax <- min(nInd, bsd$nBreedingProg*bsd$keepNBreedingCyc)
-  stopAt <- bsd$minParentAge*bsd$nPopImpCycPerYear
-  selCan <- bsd$breedingPop@id[nInd - (stopAt + (nIndMax - 1):0)]
+  # stopAt: how far back do you need to go to find parents old enough?
+  stopAt <- bsd$nBreedingProg*bsd$minParentAge*bsd$nPopImpCycPerYear
+  # Arbitrary boundary to make sure there are enough selection candiates
+  if (nInd - stopAt < 1.5 * bsd$optiContEffPop) 
+    stop("Not enough selection candidates")
+  nIndMax <- min(nInd - stopAt, bsd$nBreedingProg*bsd$keepNBreedingCyc)
+  selCan <- bsd$breedingPop@id[(nInd - stopAt) - (nIndMax - 1):0]
   gebv <- gebv[selCan]
   # Set up to use optiSel
   # 1. data.frame with a column named "Indiv" that has individual ids,
@@ -176,8 +180,8 @@ calcGRM <- function(bsd){
   allVar <- bsd$varietyCandidates[nInd - (nIndMax - 1):0]
   nInd <- nInd(bsd$breedingPop)
   nIndMax <- min(nInd, bsd$nBreedingProg*bsd$keepNBreedingCyc)
-  stopAt <- bsd$minParentAge*bsd$nPopImpCycPerYear
-  allPop <- bsd$breedingPop[nInd - (stopAt + (nIndMax - 1):0)]
+  stopAt <- bsd$nBreedingProg*bsd$minParentAge*bsd$nPopImpCycPerYear
+  allPop <- bsd$breedingPop[(nInd - stopAt) - (nIndMax - 1):0]
   switch(bsd$varietyType,
          clonal = {
            varNotPop <- setdiff(allVar@id, allPop@id)

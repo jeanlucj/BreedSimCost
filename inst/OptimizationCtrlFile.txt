@@ -1,15 +1,16 @@
 # Implementation details for optimization
 # Get rid of parallel processing if debugging
+# Also, save current state of function if error in most functions
 debug
 TRUE
 
-# Print stuff as the optimization goes along
+# Print stuff as the optimization goes along in runWithBudget
 verbose
 FALSE
 
-# Save intermediate results as you go along
+# Save intermediate results as you go along in optimizeByLOESS
 # Assuming a workflowR directory structure, results will
-# be saved in the data folder
+# be saved in the output folder
 saveIntermediateResults
 TRUE
 

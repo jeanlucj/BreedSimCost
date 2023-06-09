@@ -79,8 +79,10 @@ calcBudget <- function(bsd){
 #'
 #' Given breeding scheme budget percentages, return numbers of crosses and plots
 #' The percentages are for PIC and for allocation to each VDP stage
-#' Rules: 1. For PIC, nBreedingProg has to be at least minNBreedingProg
+#' Rules: 
+#' 1. For PIC, nBreedingProg has to be at least minNBreedingProg
 #' 2. Each stage has to have fewer entries than the previous stage
+#' 3. At the end of the VDP, there have to be more entries than go to marketing
 #' If the percentages break the rules budgetToScheme returns a failure
 #' The total budget allowed is given by bsd$budget minus location maintenance
 #' 
@@ -170,7 +172,7 @@ budgetToScheme <- function(percentages, bsd){
     }
     lambda <- max(lambda1, lambda2, lambda3)
     percentages <- (1 - lambda) * percentages + lambda * percBest
-  }
+  }#END if failure
   nBreedingProg <- numbersFromPercentages(percentages)
   nEntries <- nBreedingProg[[2]]
   nBreedingProg <- nBreedingProg[[1]]
@@ -292,7 +294,9 @@ runWithBudget <- function(percentages, bsd, returnBSD=F){
   } else{
     totalGain <- (popParmsByCyc %>% slice_tail(n=1))$varCandMean -
       (popParmsByCyc %>% slice_head(n=1))$breedPopMean
-    return(list(gainBudgetPerc=c(totalGain=totalGain, budget=bsd$realizedBudget["budget"], percentages), 
+    return(list(gainBudgetPerc=c(totalGain=totalGain, 
+                                 budget=bsd$realizedBudget["budget"], 
+                                 percentages), 
                 popParmsByCyc=popParmsByCyc))
   }
 }#END runWithBudget
@@ -328,7 +332,7 @@ runBatch <- function(batchBudg, bsd){
     batchResults <- lapply(batchBudg, runWithBudget, bsd=bsd)
   } else{
     batchResults <- mclapply(batchBudg, runWithBudget, bsd=bsd, 
-                             mc.preschedule = F, mc.cores=bsd$nCores)
+                             mc.preschedule=F, mc.cores=bsd$nCores)
   }
   # batchResults is now a list of lists
   # Remove results where budget was not valid
@@ -487,4 +491,4 @@ optimizeByLOESS <- function(bsd){
 
   if (bsd$debug) on.exit()
   return(list(results=bsd$results, allPercentRanges=allPercRanges))
-}
+}#END optimizeByLOESS

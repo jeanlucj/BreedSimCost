@@ -28,6 +28,3 @@ Go back to 1.
 A wrapper to repeatedly simulate a scheme with different 
 budget allocations to find optimal allocations
 }
-\examples{
-
-}
