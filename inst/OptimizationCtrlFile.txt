@@ -4,15 +4,9 @@
 debug
 TRUE
 
-# Print stuff as the optimization goes along in runWithBudget
+# Print percentages and time to run in runWithBudget
 verbose
 FALSE
-
-# Save intermediate results as you go along in optimizeByLOESS
-# Assuming a workflowR directory structure, results will
-# be saved in the output folder
-saveIntermediateResults
-TRUE
 
 # Number of cores for parallel processing
 nCores
@@ -37,42 +31,3 @@ percentageStep
 # progeny in each cycle will be too small to make sense
 minNBreedingProg
 2
-
-# Number of variety candidates in the last stage
-# that will go to the marketing department. Also the
-# minimum number of entries in the last stage
-# Assume marketing does extensive on-farm trials
-nToMarketingDept
-4
-
-# How small should the confidence interval
-# on budgets be before you stop optimization? All budgets
-# that have a gain within 2 StdErr of the best are
-# included in the confidence interval. For each stage
-# the difference between min and max budgets must be
-# below the tolerance
-tolerance
-0.40
-
-# Optimization runs a batch of simulations, analyzes
-# them to estimate and optimum, then, if tolerance not
-# met, runs another batch: How many sims per batch?
-batchSize
-72
-
-# How many batches should you do before you give up
-# to prevent an optimization from running forever
-maxNumBatches
-10
-
-# In preparing the next batch of simulations, the
-# optimization will redo some number that had high
-# gain and some number for which the StdErr of the gain
-# was high.
-# For the next batch how many sims should be high gain?
-nHighGain
-50
-
-# For the next batch how many should be high uncertainty?
-nUncertain
-10

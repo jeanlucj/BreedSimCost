@@ -31,10 +31,11 @@ initializeProgram <- function(founderFile, schemeFile,
 
   # SchemeFile
   # Read parameters about the overall scheme
-  parmNames <- c("nCyclesToRun", "nBurnInCycles", "nStages", "stageNames", 
-                 "nEntries", "nReps", "nLocs", "errVars", "optiContEffPop",
-                 "nBreedingProg", "nPopImpCycPerYear", "keepNTrainingCyc", 
-                 "keepNBreedingCyc", "minParentAge")
+  parmNames <- c("nCyclesToRun", "nBurnInCycles", 
+                 "nStages", "stageNames", "nEntries", "nToMarketingDept", 
+                 "nReps", "nLocs", "errVars", 
+                 "optiContEffPop", "nBreedingProg", "nPopImpCycPerYear", 
+                 "keepNTrainingCyc", "keepNBreedingCyc", "minParentAge")
   bsdNew <- readControlFile(schemeFile, parmNames)
   bsd <- c(bsd, bsdNew)
   # Because different budget allocations will change these, store initial values
@@ -51,10 +52,8 @@ initializeProgram <- function(founderFile, schemeFile,
   # OptimizationFile
   # Read parameters about optimization procedure
   parmNames <- c("nCores", "minPercentage", "maxPercentage",
-                 "percentageStep", "minNBreedingProg", "nToMarketingDept",
-                 "tolerance", "batchSize", "maxNumBatches",
-                 "nHighGain", "nUncertain", "debug", 
-                 "verbose", "saveIntermediateResults")
+                 "percentageStep", "minNBreedingProg",
+                 "debug", "verbose")
   bsdNew <- readControlFile(optimizationFile, parmNames)
   bsd <- c(bsd, bsdNew)
   
@@ -206,7 +205,6 @@ calcDerivedParms <- function(bsd){
   bsd$quickHaplo <- makeLogical(bsd$quickHaplo)
   bsd$debug <- makeLogical(bsd$debug)
   bsd$verbose <- makeLogical(bsd$verbose)
-  bsd$saveIntermediateResults <- makeLogical(bsd$saveIntermediateResults)
 
   # Genetic architecture defaults
   if (nv(bsd$meanDD)) bsd$meanDD <- 0

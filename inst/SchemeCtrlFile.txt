@@ -21,6 +21,13 @@ SDN CET PYT
 nEntries
 70 30 10
 
+# Number of variety candidates in the last stage
+# that will go to the marketing department. Also the
+# minimum number of entries in the last stage
+# Assume marketing does extensive on-farm trials
+nToMarketingDept
+4
+
 # Vector of number of reps used in each stage
 nReps
 1 1 2
