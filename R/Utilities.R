@@ -278,7 +278,7 @@ calcCurrentStatus <- function(bsd){
 #' @param ylim Real max and min for plot
 #' @param budg1 Integer which column of percent budget to make plot for x-axis
 #' @param budg2 Integer which column of percent budget to make plot for y-axis
-#' @param degree Interger the degree of the polynomial LOESS fits
+#' @param degree Integer the degree of the polynomial LOESS fits
 #' @return A list with bin counts and means and results from LOESS predictions
 #'
 #' @details Use the hexbin function to tabulate 2D bins in hexagonal array
